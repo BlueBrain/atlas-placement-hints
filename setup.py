@@ -1,26 +1,20 @@
 #!/usr/bin/env python
 
-import imp
-
 from setuptools import find_packages, setup
-
-VERSION = imp.load_source("", "atlas_placement_hints/version.py").__version__
 
 setup(
     name="atlas-placement-hints",
-    author="BlueBrain NSE",
-    author_email="bbp-ou-nse@groupes.epfl.ch",
-    version=VERSION,
+    author="Blue Brain Project, EPFL",
     description="Library containing command lines and tools to compute placement hints",
-    url="https://bbpgitlab.epfl.ch/nse/atlas-placement-hints",
-    download_url="git@bbpgitlab.epfl.ch:nse/atlas-placement-hints.git",
-    license="BBP-internal-confidential",
-    python_requires=">=3.6.0",
+    url="https://github.com/BlueBrain/atlas-placement-hints",
+    download_url="https://github.com/BlueBrain/atlas-placement-hints",
+    license="Apache-2",
+    python_requires=">=3.7.0",
     install_requires=[
         "atlas-commons>=0.1.3.dev0",
         "cached-property>=1.5.2",
         "click>=7.0",
-        "cgal_pybind>=0.1.4",  # python3.9/3.10 wheels for >=0.1.4
+        "cgal-pybind>=0.1.4",
         "networkx>=2.4",  # soft dep required for trimesh to allow 'repair'
         "numpy>=1.15.0",
         "rtree>=0.8.3",  # soft dep required for trimesh to allow indexing
@@ -37,10 +31,21 @@ setup(
     packages=find_packages(),
     include_package_data=True,
     entry_points={"console_scripts": ["atlas-placement-hints=atlas_placement_hints.app.cli:cli"]},
+
+    use_scm_version={
+        "local_scheme": "no-local-version",
+        },
+    setup_requires=[
+        'setuptools_scm',
+    ],
+
     classifiers=[
         "Development Status :: 2 - Pre-Alpha",
         "Programming Language :: Python",
         "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
     ],
 )
