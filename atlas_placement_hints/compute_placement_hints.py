@@ -4,7 +4,7 @@ to direction vectors, a.k.a placement hints, in a layered atlas.
 
 from typing import TYPE_CHECKING, Dict, List, Optional, Tuple, Union
 
-from nptyping import NDArray  # type: ignore
+from atlas_commons.typing import BoolArray, FloatArray
 
 from atlas_placement_hints.distances.distances_to_meshes import (
     interpolate_problematic_distances,
@@ -16,14 +16,14 @@ if TYPE_CHECKING:  # pragma: no cover
     from atlas_placement_hints.placement_hints.layered_atlas import AbstractLayeredAtlas
 
 
-DistanceInfo = Dict[str, Union["AbstractLayeredAtlas", NDArray[float], NDArray[bool]]]
+DistanceInfo = Dict[str, Union["AbstractLayeredAtlas", FloatArray, BoolArray]]
 DistancesReport = Dict[str, float]
 
 
 # pylint: disable=too-many-arguments, too-many-locals
 def compute_placement_hints(
     atlas: "AbstractLayeredAtlas",
-    direction_vectors: NDArray[float],
+    direction_vectors: FloatArray,
     max_thicknesses: Optional[List[float]] = None,
     flip_direction_vectors: bool = False,
     has_hemispheres: bool = True,

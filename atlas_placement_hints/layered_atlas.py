@@ -4,17 +4,19 @@ voxel-to-layer distances wrt to direction vectors in a laminar brain region.
 This module is used for the computation of placement hints in the mouse
 isocortex and in the mouse Hippocampus CA1 region.
 """
+from __future__ import annotations
+
 import logging
 import os
 from abc import ABC, abstractmethod
 from enum import IntEnum
 from typing import TYPE_CHECKING, Dict, List, Union
 
-import numpy as np  # type: ignore
+import numpy as np
+from atlas_commons.typing import BoolArray, FloatArray, NDArray
 from atlas_commons.utils import create_layered_volume, query_region_mask, split_into_halves
 from cached_property import cached_property  # type: ignore
 from cgal_pybind import estimate_thicknesses
-from nptyping import NDArray  # type: ignore
 from tqdm import tqdm  # type: ignore
 
 from atlas_placement_hints.distances.create_watertight_mesh import create_watertight_trimesh
@@ -102,7 +104,7 @@ class AbstractLayeredAtlas(ABC):
         return self.annotation.with_data(region_mask)
 
     @cached_property
-    def volume(self) -> NDArray[int]:
+    def volume(self) -> NDArray[np.integer]:
         """
         Get the volume enclosed by the specified layers.
 
@@ -123,10 +125,10 @@ class AbstractLayeredAtlas(ABC):
     @abstractmethod
     def compute_distances_to_layer_boundaries(
         self,
-        direction_vectors: NDArray[float],
+        direction_vectors: FloatArray,
         has_hemispheres: bool = True,
         flip_direction_vectors: bool = False,
-    ) -> Dict[str, Union[NDArray[float], NDArray[bool]]]:
+    ) -> Dict[str, Union[FloatArray, BoolArray]]:
         """
         Compute distances from voxels to layers boundariea wrt to direction vectors.
         """
@@ -155,7 +157,7 @@ class MeshBasedLayeredAtlas(AbstractLayeredAtlas):
 
         AbstractLayeredAtlas.__init__(self, annotation, region_map, metadata)
 
-    def create_layer_meshes(self, layered_volume: NDArray[int]) -> List["trimesh.Trimesh"]:
+    def create_layer_meshes(self, layered_volume: NDArray[np.integer]) -> List["trimesh.Trimesh"]:
         """
         Create meshes representing the upper boundary of each layer
         in the laminar region volume, referred to as `layered_volume`.
@@ -252,10 +254,10 @@ class MeshBasedLayeredAtlas(AbstractLayeredAtlas):
 
     def compute_distances_to_layer_boundaries(
         self,
-        direction_vectors: NDArray[float],
+        direction_vectors: FloatArray,
         has_hemispheres: bool = True,
         flip_direction_vectors: bool = False,
-    ) -> Dict[str, Union[NDArray[float], NDArray[bool]]]:
+    ) -> Dict[str, Union[FloatArray, BoolArray]]:
         """
         Compute distances from voxels to layers boundaries wrt to direction vectors.
         Boundaries are represented by 3D surface meshes.
@@ -306,7 +308,7 @@ class ThalamusAtlas(MeshBasedLayeredAtlas):
     has voxels with labels 549 in both AIBS CCFv2 and CCFv3 mouse brain models.
     """
 
-    def create_layer_meshes(self, layered_volume: NDArray[int]) -> List["trimesh.Trimesh"]:
+    def create_layer_meshes(self, layered_volume: NDArray[np.integer]) -> List["trimesh.Trimesh"]:
         """
         Create meshes representing the upper boundary of each layer of the thalamus atlas.
         """
@@ -355,10 +357,10 @@ class VoxelBasedLayeredAtlas(AbstractLayeredAtlas):
 
     def compute_distances_to_layer_boundaries(
         self,
-        direction_vectors: NDArray[float],
+        direction_vectors: FloatArray,
         has_hemispheres: bool = True,
         flip_direction_vectors: bool = False,
-    ) -> Dict[str, Union[NDArray[float], NDArray[bool]]]:
+    ) -> Dict[str, Union[FloatArray, BoolArray]]:
         """
         Compute distances from voxels to layers boundaries wrt to direction vectors.
 

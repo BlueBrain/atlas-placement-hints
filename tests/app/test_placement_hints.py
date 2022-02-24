@@ -156,7 +156,7 @@ def test_ca1():
                 report_before[
                     "Proportion of voxels whose distances to layer boundaries are not ordered consistently"
                 ]
-                <= 0.05
+                <= 0.06
             )
 
             assert (

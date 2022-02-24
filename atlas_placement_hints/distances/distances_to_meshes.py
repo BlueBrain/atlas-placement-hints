@@ -2,24 +2,21 @@
 Module containing free functions for the computation of
 distances to boundary meshes with respect to voxels direction vectors.
 """
+from __future__ import annotations
 
 import logging
 import warnings
-from typing import TYPE_CHECKING, Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Union
 
-import numpy as np  # type: ignore
-import trimesh  # type: ignore
+import numpy as np
+import trimesh
+from atlas_commons.typing import BoolArray, FloatArray, NDArray
 from atlas_commons.utils import normalized, split_into_halves
-from nptyping import NDArray  # type: ignore
-from scipy.interpolate import NearestNDInterpolator  # type: ignore
+from scipy.interpolate import LinearNDInterpolator, NearestNDInterpolator
 
 from atlas_placement_hints.distances.utils import memory_efficient_intersection
 from atlas_placement_hints.exceptions import AtlasPlacementHintsError
 from atlas_placement_hints.utils import is_obtuse_angle
-
-if TYPE_CHECKING:  # pragma: no cover
-    from scipy.interpolate import LinearNDInterpolator  # pylint: disable=ungrouped-imports
-
 
 logging.basicConfig(level=logging.INFO)
 logging.captureWarnings(True)
@@ -28,10 +25,10 @@ L = logging.getLogger(__name__)
 
 def distances_to_mesh_wrt_dir(
     mesh: "trimesh.TriMesh",
-    origins: NDArray[float],
-    directions: NDArray[float],
+    origins: FloatArray,
+    directions: FloatArray,
     backward: bool = False,
-) -> Tuple[NDArray[float], NDArray[bool]]:
+) -> Tuple[FloatArray, BoolArray]:
     """
     Compute the distances from `origins` to the input mesh along `directions`.
 
@@ -83,10 +80,10 @@ def distances_to_mesh_wrt_dir(
 
 
 def _split_indices_along_layer(
-    layers_volume: NDArray[int],
+    layers_volume: NDArray[np.integer],
     layer: int,
-    valid_direction_vectors_mask: NDArray[bool],
-) -> Tuple[List[NDArray[int]], List[NDArray[int]]]:
+    valid_direction_vectors_mask: BoolArray,
+) -> Tuple[List[NDArray[np.integer]], List[NDArray[np.integer]]]:
     """
     Separate in two groups the voxels in `layers_volume` according to
     their position with respect to `layer`.
@@ -120,10 +117,10 @@ def _split_indices_along_layer(
 
 # pylint: disable=too-many-arguments
 def _compute_distances_to_mesh(
-    directions: NDArray[float],
-    dists: NDArray[float],
-    any_obtuse_intersection: NDArray[bool],
-    voxel_indices: List[NDArray[int]],
+    directions: FloatArray,
+    dists: FloatArray,
+    any_obtuse_intersection: BoolArray,
+    voxel_indices: List[NDArray[np.integer]],
     mesh: "trimesh.Trimesh",
     index: int,
     backward: bool = False,
@@ -182,10 +179,10 @@ def _compute_distances_to_mesh(
 
 
 def distances_from_voxels_to_meshes_wrt_dir(
-    layers_volume: NDArray[int],
+    layers_volume: NDArray[np.integer],
     layer_meshes: List[trimesh.Trimesh],
-    directions: NDArray[float],
-) -> Tuple[NDArray[float], NDArray[bool]]:
+    directions: FloatArray,
+) -> Tuple[FloatArray, BoolArray]:
     """
     For each voxel of the layers volume, compute the distance to each layer mesh along the
     the voxel direction vector.
@@ -244,7 +241,7 @@ def distances_from_voxels_to_meshes_wrt_dir(
     return dists, any_obtuse_intersection
 
 
-def fix_disordered_distances(distances: NDArray[float]) -> None:
+def fix_disordered_distances(distances: FloatArray) -> None:
     """
     Meshes close to one another may intersect one another, leading to distances which do not match
     the layer order.
@@ -275,8 +272,8 @@ def fix_disordered_distances(distances: NDArray[float]) -> None:
 
 
 def get_thickness_excess_mask(
-    distances: NDArray[float], max_thicknesses: NDArray[float], tolerance: float
-) -> NDArray[bool]:
+    distances: FloatArray, max_thicknesses: FloatArray, tolerance: float
+) -> BoolArray:
     """
     Retrieve the boolean mask of the voxels which bear at least one invalid layer thickness hint
 
@@ -304,8 +301,8 @@ def get_thickness_excess_mask(
 
 
 def _handle_nan_distances(
-    distances: NDArray[float], region_mask: NDArray[bool], report: Dict[str, float]
-) -> NDArray[bool]:
+    distances: FloatArray, region_mask: BoolArray, report: Dict[str, float]
+) -> BoolArray:
     """
     Reports the proportions of voxels which have been assigned a NaN distance.
 
@@ -345,8 +342,8 @@ def _handle_nan_distances(
 
 
 def _handle_distance_inconsistencies(
-    distances: NDArray[float], layered_volume: NDArray[int], report: Dict[str, float]
-) -> NDArray[bool]:
+    distances: FloatArray, layered_volume: NDArray[np.integer], report: Dict[str, float]
+) -> BoolArray:
     """
     Reports the proportions of voxels which have been assigned inconsistent distances.
 
@@ -412,12 +409,12 @@ def _handle_distance_inconsistencies(
 
 
 def report_distance_problems(
-    distances: NDArray[float],
-    layered_volume: NDArray[int],
-    obtuse_intersection: Optional[NDArray[bool]] = None,
-    max_thicknesses: Optional[NDArray[float]] = None,
+    distances: FloatArray,
+    layered_volume: NDArray[np.integer],
+    obtuse_intersection: Optional[BoolArray] = None,
+    max_thicknesses: Optional[FloatArray] = None,
     tolerance: float = 0.0,
-) -> Tuple[Dict[str, float], NDArray[bool]]:
+) -> Tuple[Dict[str, float], BoolArray]:
     """
     Reports the proportions of voxels subject to some distance-related problem.
 
@@ -482,13 +479,13 @@ def report_distance_problems(
     return report, np.logical_and(problematic_volume, region_mask)
 
 
-Interpolator = Union[NearestNDInterpolator, "LinearNDInterpolator"]
+Interpolator = Union[NearestNDInterpolator, LinearNDInterpolator]
 
 
 def interpolate_scalar_field(
-    field: NDArray[float],
-    unknown_values_mask: NDArray[bool],
-    known_values_mask: NDArray[bool],
+    field: FloatArray,
+    unknown_values_mask: BoolArray,
+    known_values_mask: BoolArray,
     interpolator: Interpolator = NearestNDInterpolator,
 ) -> None:
     """
@@ -518,9 +515,9 @@ def interpolate_scalar_field(
 
 
 def interpolate_problematic_distances(
-    distances: NDArray[float],
-    problematic_mask: NDArray[bool],
-    layered_volume: NDArray[int],
+    distances: FloatArray,
+    problematic_mask: BoolArray,
+    layered_volume: NDArray[np.integer],
     has_hemispheres: bool = True,
 ) -> None:
     """
@@ -550,7 +547,7 @@ def interpolate_problematic_distances(
     Returns:
         None (mutates `distances` in place).
     """
-    layered_volumes: Tuple[NDArray[int], ...] = (layered_volume,)
+    layered_volumes: Tuple[NDArray[np.integer], ...] = (layered_volume,)
     if has_hemispheres:
         layered_volumes = split_into_halves(layered_volume)
 

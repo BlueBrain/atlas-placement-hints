@@ -3,11 +3,13 @@
 See https://bbpteam.epfl.ch/documentation/projects/placement-algorithm/latest/index.html
 for the specifications of the placement hints.
 """
+from __future__ import annotations
+
 import json
 import logging
 import os
 from pathlib import Path
-from typing import TYPE_CHECKING, List, Optional
+from typing import List, Optional
 
 import click
 import voxcell  # type: ignore
@@ -24,16 +26,13 @@ from atlas_commons.utils import assert_metadata_content
 from atlas_placement_hints.compute_placement_hints import compute_placement_hints
 from atlas_placement_hints.exceptions import AtlasPlacementHintsError
 from atlas_placement_hints.layered_atlas import (
+    AbstractLayeredAtlas,
     MeshBasedLayeredAtlas,
     ThalamusAtlas,
     VoxelBasedLayeredAtlas,
     save_problematic_voxel_mask,
 )
 from atlas_placement_hints.utils import save_placement_hints
-
-if TYPE_CHECKING:  # pragma: no cover
-    from atlas_placement_hints.layered_atlas import AbstractLayeredAtlas
-
 
 L = logging.getLogger(__name__)
 METADATA_PATH = Path(Path(__file__).parent, "metadata")
@@ -43,7 +42,7 @@ ALGORITHMS = ["mesh-based", "voxel-based"]
 
 def _create_layered_atlas(
     annotation_path: str, hierarchy_path: str, metadata_path: str, algorithm: str = "mesh-based"
-) -> "AbstractLayeredAtlas":
+) -> AbstractLayeredAtlas:
     """
     Create the LayeredAtlas of the region `region_acronym`.
 
@@ -72,7 +71,7 @@ def _create_layered_atlas(
 
 
 def _placement_hints(  # pylint: disable=too-many-locals
-    atlas: "AbstractLayeredAtlas",
+    atlas: AbstractLayeredAtlas,
     direction_vectors_path: str,
     output_dir: str,
     max_thicknesses: Optional[List[float]] = None,

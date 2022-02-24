@@ -1,10 +1,12 @@
 """
 Utility functions to compute distances to boundaries.
 """
+from __future__ import annotations
+
 from typing import TYPE_CHECKING, Tuple
 
-import numpy as np  # type: ignore
-from nptyping import NDArray  # type: ignore
+import numpy as np
+from atlas_commons.typing import FloatArray, NDArray
 
 if TYPE_CHECKING:  # pragma: no cover
     import trimesh  # type: ignore
@@ -37,11 +39,11 @@ def _get_split_count(memory_bound: int, chunk_length: int, ray_count: int, face_
 
 def memory_efficient_intersection(
     intersector: "trimesh.ray.ray_triangle.RayMeshIntersector",
-    ray_origins: NDArray[int],
-    ray_directions: NDArray[float],
+    ray_origins: NDArray[np.integer],
+    ray_directions: FloatArray,
     memory_bound: int = 150,
     chunk_length: int = 100000,
-) -> Tuple[NDArray[int], NDArray[int], NDArray[int]]:
+) -> Tuple[NDArray[np.integer], NDArray[np.integer], NDArray[np.integer]]:
     """
     Split the computations of ray intersections using several chunks of a
     specified length.
@@ -65,10 +67,10 @@ def memory_efficient_intersection(
         tri_ids: array (N, 1): ids of mesh triangles intersecting a ray.
     """
 
-    locations: NDArray[int] = np.array([[]], dtype=int)
+    locations: NDArray[np.integer] = np.array([[]], dtype=int)
     locations = np.reshape(locations, (0, 3))
-    ray_ids: NDArray[int] = np.array([], dtype=int)
-    tri_ids: NDArray[int] = np.array([], dtype=int)
+    ray_ids: NDArray[np.integer] = np.array([], dtype=int)
+    tri_ids: NDArray[np.integer] = np.array([], dtype=int)
 
     split_count = _get_split_count(
         memory_bound,

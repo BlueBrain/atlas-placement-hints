@@ -17,21 +17,22 @@ setup(
     license="BBP-internal-confidential",
     python_requires=">=3.6.0",
     install_requires=[
-        "atlas-commons>=0.1.2",
+        "atlas-commons>=0.1.3.dev0",
         "cached-property>=1.5.2",
         "click>=7.0",
-        "cgal_pybind>=0.1.1",
-        "networkx>=2.4",
-        "nptyping>=1.0.1",
+        "cgal_pybind>=0.1.4",  # python3.9/3.10 wheels for >=0.1.4
+        "networkx>=2.4",  # soft dep required for trimesh to allow 'repair'
         "numpy>=1.15.0",
-        "rtree>=0.8.3",
+        "rtree>=0.8.3",  # soft dep required for trimesh to allow indexing
         "scipy>=1.4.1",
         "tqdm>=4.44.1",
         "trimesh>=2.38.10",
         "voxcell>=3.0.0",
     ],
     extras_require={
-        "tests": ["pytest>=4.4.0", "mock>=2.0.0"],
+        "tests": [
+            "pytest>=4.4.0",
+        ],
     },
     packages=find_packages(),
     include_package_data=True,

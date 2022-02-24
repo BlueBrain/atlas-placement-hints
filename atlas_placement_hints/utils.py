@@ -1,15 +1,16 @@
 """
 Utility functions for the computation of placement hints.
 """
+from __future__ import annotations
+
 import logging
 from pathlib import Path
-from typing import List, Tuple, Union
+from typing import List, Tuple
 
-import numpy as np  # type: ignore
-import trimesh  # type: ignore
-import voxcell  # type: ignore
-from atlas_commons.utils import NumericArray
-from nptyping import NDArray  # type: ignore
+import numpy as np
+import trimesh
+import voxcell
+from atlas_commons.typing import BoolArray, FloatArray, NDArray, NumericArray
 from scipy.ndimage import correlate
 
 # I don't know why, but pylint believes scipy.spatial.ConvexHull is a myth
@@ -20,10 +21,7 @@ logging.basicConfig(level=logging.INFO)
 L = logging.getLogger(__name__)
 
 
-Region = Union[str, voxcell.VoxelData, NDArray[int]]
-
-
-def is_obtuse_angle(vector_field_1: NumericArray, vector_field_2: NumericArray) -> NDArray[bool]:
+def is_obtuse_angle(vector_field_1: NumericArray, vector_field_2: NumericArray) -> BoolArray:
     """
     Returns a mask indicating which vector pairs form an obtuse angle.
 
@@ -51,9 +49,9 @@ def centroid_outfacing_mesh(mesh: trimesh.Trimesh) -> trimesh.Trimesh:
 
 
 def save_placement_hints(
-    distances: NDArray[float],
+    distances: FloatArray,
     output_dir: str,
-    voxel_data: "voxcell.VoxelData",
+    voxel_data: voxcell.VoxelData,
     layer_names: List[str],
 ):
     """
@@ -104,7 +102,7 @@ def save_placement_hints(
         voxel_data.with_data(placement_hints).save_nrrd(layer_placement_hints_path)
 
 
-def detailed_mesh_mask(mesh: "trimesh.Trimesh", shape: Tuple[int, int, int]) -> NDArray[bool]:
+def detailed_mesh_mask(mesh: trimesh.Trimesh, shape: Tuple[int, ...]) -> BoolArray:
     """
     Generate a mask for the voxels occupied by `mesh`.
 
@@ -119,7 +117,7 @@ def detailed_mesh_mask(mesh: "trimesh.Trimesh", shape: Tuple[int, int, int]) -> 
         boolean mask of the voxels occupied by mesh. The shape of `mask` is `shape`.
     """
 
-    def points_in_between(p_1, p_2) -> NDArray[float]:
+    def points_in_between(p_1, p_2) -> FloatArray:
         """
         Create points at regular intervals between `p_1` and `p_2`.
 
@@ -159,7 +157,7 @@ def detailed_mesh_mask(mesh: "trimesh.Trimesh", shape: Tuple[int, int, int]) -> 
     return mask
 
 
-def get_convex_hull_boundary(mask: NDArray[bool]) -> "trimesh.Trimesh":
+def get_convex_hull_boundary(mask: BoolArray) -> trimesh.Trimesh:
     """Get the convex hull boundary of the volume defined by `mask`
 
     Args:
@@ -175,7 +173,7 @@ def get_convex_hull_boundary(mask: NDArray[bool]) -> "trimesh.Trimesh":
 
 
 def indexable(
-    positions: NDArray[float],
+    positions: FloatArray,
 ) -> Tuple[NDArray[np.int16], ...]:
     """
     Convert a float array of shape (N, 3) into a 3-tuple of voxel indices.
@@ -193,15 +191,17 @@ def indexable(
 
 
     """
-    return tuple(np.int16(positions[..., ax]) for ax in range(positions.shape[-1]))
+    return tuple(
+        np.asarray(positions[..., ax], dtype=np.int16) for ax in range(positions.shape[-1])
+    )
 
 
 def clip_mesh(
     mesh: "trimesh.Mesh",
-    mask: NDArray[bool],
+    mask: BoolArray,
     remainder: bool = False,
     dilation: int = 5,
-) -> "trimesh.Trimesh":
+) -> trimesh.Trimesh:
     """
     Get the parts of a mesh which are in the space of `mask`'s volume or the remainder.
 

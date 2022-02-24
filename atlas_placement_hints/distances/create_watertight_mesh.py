@@ -12,9 +12,9 @@ from distutils.spawn import find_executable
 from pathlib import Path
 
 import nrrd  # type: ignore
-import numpy as np  # type: ignore
+import numpy as np
 import trimesh  # type: ignore
-from nptyping import NDArray  # type: ignore
+from atlas_commons.typing import BoolArray, FloatArray
 from scipy.spatial.distance import cdist, directed_hausdorff  # type: ignore
 
 from atlas_placement_hints.exceptions import AtlasPlacementHintsError
@@ -23,7 +23,7 @@ L = logging.getLogger(__name__)
 L.setLevel(logging.INFO)
 
 
-def _write_numpy_array_to_img_file(img_array: NDArray[bool], filename: str) -> None:
+def _write_numpy_array_to_img_file(img_array: BoolArray, filename: str) -> None:
     """
     Write the content of a 3D image provided as a numpy array
     to a file with extension .img
@@ -129,9 +129,7 @@ def ultra_volume_2_mesh(
     )
 
 
-def mean_min_dist(
-    points_1: NDArray[float], points_2: NDArray[float], sample_size: int = 1000
-) -> float:
+def mean_min_dist(points_1: FloatArray, points_2: FloatArray, sample_size: int = 1000) -> float:
     """
     Compute the mean of the minimum distance of
     3D points in a random sample of `points_1` to all points in `points_2`.
@@ -145,7 +143,7 @@ def mean_min_dist(
         mean of the distances of the points in the sample to `points_2`.
     """
     sampled_indices = np.random.choice(len(points_1), size=sample_size, replace=False)
-    distances: NDArray[float] = np.min(cdist(points_1[sampled_indices], points_2), axis=1)
+    distances: FloatArray = np.min(cdist(points_1[sampled_indices], points_2), axis=1)
 
     return float(np.mean(distances))
 
@@ -178,7 +176,7 @@ def log_mesh_optimization_info(
 
 
 def create_watertight_trimesh(
-    binary_image: NDArray[bool],
+    binary_image: BoolArray,
     optimization_info: bool = False,
 ) -> trimesh.base.Trimesh:
     """

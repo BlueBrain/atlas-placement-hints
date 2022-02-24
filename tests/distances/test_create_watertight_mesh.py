@@ -5,11 +5,11 @@ import os
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
-import numpy as np  # type: ignore
-import pytest  # type: ignore
-import trimesh  # type: ignore
-from mock import patch
+import numpy as np
+import pytest
+import trimesh
 
 import atlas_placement_hints.distances.create_watertight_mesh as tested
 from atlas_placement_hints.exceptions import AtlasPlacementHintsError
