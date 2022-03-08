@@ -21,7 +21,7 @@ Once Ultraliser_ is installed, run the following ``bash`` commands:
 
 .. code-block:: bash
 
-    git clone https://github.com/BlueBrain/atlas_placement_hints
+    git clone https://github.com/BlueBrain/atlas-placement-hints
     cd atlas-placement-hints
     pip install -e .
 
