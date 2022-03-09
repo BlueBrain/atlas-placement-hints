@@ -19,6 +19,7 @@ from atlas_placement_hints.layered_atlas import (  # type: ignore
     ThalamusAtlas,
     VoxelBasedLayeredAtlas,
 )
+from tests.mark import skip_if_no_ultraliser
 from tests.placement_hints.mocking_tools import IsocortexMock, ThalamusMock
 
 TEST_PATH = Path(Path(__file__).parent.parent)
@@ -79,6 +80,7 @@ class Test_LayeredAtlas(unittest.TestCase):
         expected[expected == 507] = 0
         npt.assert_array_equal(volume, expected)
 
+    @skip_if_no_ultraliser
     def test_create_layer_meshes(self):
         volume = self.mesh_based_layered_atlas.volume
         meshes = self.mesh_based_layered_atlas.create_layer_meshes(volume)
@@ -90,6 +92,7 @@ class Test_LayeredAtlas(unittest.TestCase):
                 <= 1.2 * self.isocortex_mock.padding + (6 - i) * self.isocortex_mock.thickness
             )
 
+    @skip_if_no_ultraliser
     def test_compute_distances_to_layer_boundaries(self):
         direction_vectors = np.zeros(self.isocortex_mock.annotation.raw.shape + (3,), dtype=float)
         direction_vectors[self.isocortex_mock.annotation.raw > 0] = (0.0, 1.0, 0.0)
@@ -166,6 +169,7 @@ class Test_Thalamus_Atlas(unittest.TestCase):
         expected[expected == 262] = 1
         npt.assert_array_equal(self.thalamus_atlas.volume, expected)
 
+    @skip_if_no_ultraliser
     def test_create_layer_meshes(self):
         meshes = self.thalamus_atlas.create_layer_meshes(self.thalamus_atlas.volume)
 

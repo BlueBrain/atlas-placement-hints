@@ -3,13 +3,16 @@ import json
 
 import numpy as np
 import numpy.testing as npt
+import pytest
 from click.testing import CliRunner
 from voxcell import VoxelData  # type: ignore
 
 import atlas_placement_hints.app.placement_hints as tested
+from tests.mark import skip_if_no_ultraliser
 from tests.placement_hints.mocking_tools import Ca1Mock, IsocortexMock, ThalamusMock
 
 
+@skip_if_no_ultraliser
 def test_thalamus():
     runner = CliRunner()
     with runner.isolated_filesystem():
@@ -108,6 +111,7 @@ def test_thalamus():
         npt.assert_array_equal(ph_th_no_rt.raw.shape, thalamus_mock.annotation.raw.shape + (2,))
 
 
+@skip_if_no_ultraliser
 def test_ca1():
     runner = CliRunner()
     with runner.isolated_filesystem():
@@ -221,6 +225,7 @@ def _get_isocortex_result(runner, algorithm="mesh-based"):
     return runner.invoke(tested.isocortex, options)
 
 
+@skip_if_no_ultraliser
 def test_isocortex():
     runner = CliRunner()
     with runner.isolated_filesystem():
