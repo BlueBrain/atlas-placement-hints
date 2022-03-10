@@ -2,10 +2,15 @@
 
 from setuptools import find_packages, setup
 
+with open("README.rst") as f:
+    README = f.read()
+
 setup(
     name="atlas-placement-hints",
     author="Blue Brain Project, EPFL",
     description="Library containing command lines and tools to compute placement hints",
+    long_description=README,
+    long_description_content_type="text/x-rst",
     url="https://github.com/BlueBrain/atlas-placement-hints",
     download_url="https://github.com/BlueBrain/atlas-placement-hints",
     license="Apache-2",
