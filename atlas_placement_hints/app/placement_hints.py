@@ -1,7 +1,4 @@
 """Generate and save the placement hints of different regions of the AIBS mouse brain
-
-See https://bbpteam.epfl.ch/documentation/projects/placement-algorithm/latest/index.html
-for the specifications of the placement hints.
 """
 from __future__ import annotations
 
@@ -152,9 +149,6 @@ def app():
     interpolation, with the placement hints of nearby voxels,
     - 2 means that a problem persisted after interpolation,
     - 3 means that a problem was created by interpolation.
-
-    For the definition of the placement hints, see:
-    https://bbpteam.epfl.ch/documentation/projects/placement-algorithm/latest/index.html#input-data
     """
 
 

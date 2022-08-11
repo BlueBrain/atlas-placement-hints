@@ -554,7 +554,7 @@ def interpolate_problematic_distances(
     for layered_hemisphere in layered_volumes:
         for label in np.unique(layered_hemisphere[layered_hemisphere != 0]):
             layer_mask = layered_hemisphere == label
+            valid = np.logical_and(layer_mask, ~problematic_mask)
+            invalid = np.logical_and(layer_mask, problematic_mask)
             for distance in distances:
-                valid = np.logical_and(layer_mask, ~problematic_mask)
-                invalid = np.logical_and(layer_mask, problematic_mask)
                 interpolate_scalar_field(distance, invalid, valid)
