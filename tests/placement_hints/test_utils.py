@@ -48,9 +48,12 @@ def test_centroid_outfacing_mesh():
     # The centroid lies outside of the mesh
     vertices = [[-1, 0, 0], [1, 0, 0], [0, 1, 0], [0, 0, 1], [0, 0, 0.8]]
     faces = [[0, 1, 3], [0, 3, 2], [3, 1, 2], [0, 2, 4], [0, 4, 1], [1, 4, 2]]
+
     mesh = trimesh.Trimesh(vertices=vertices, faces=faces)
-    expected_vertices = [[0, 0, 1], [0, 1, 0], [-1, 0, 0], [1, 0, 0]]
-    expected_faces = [[2, 3, 0], [2, 0, 1], [0, 3, 1]]
+    expected_vertices = np.array(
+        [[-1.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]
+    )
+    expected_faces = np.array([[0, 1, 3], [0, 3, 2], [3, 1, 2]])
     result = tested.centroid_outfacing_mesh(mesh)
     npt.assert_array_equal(result.vertices, expected_vertices)
     npt.assert_array_equal(result.faces, expected_faces)
