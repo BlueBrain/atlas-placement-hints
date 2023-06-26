@@ -41,13 +41,14 @@ def _write_numpy_array_to_img_file(img_array: BoolArray, filename: str) -> None:
         filename + ".nrrd",
         np.uint8(img_array),
         header={"encoding": "raw"},
-        detached_header=True,  # ultraVolum2Mesh cannot read embedded headers.
+        detached_header=True,  # ultraVolume2Mesh cannot read embedded headers.
     )
     os.rename(filename + ".nrrd", filename + ".img")
     os.remove(filename + ".nhdr")
-    # Create a one-line header file for ultraVolume2Mesh containing only the shape of the 3D array.
+    # Create a two-line header file for ultraVolume2Mesh containing only the type and shape of the 3D array.
     header = filename + ".hdr"
     with open(header, "w", encoding="utf-8") as file_:
+        file_.write("uchar\n")
         file_.write(" ".join([str(d) for d in img_array.shape]))
 
 
@@ -79,11 +80,11 @@ def _get_ultra_volume_2_mesh_path() -> str:
 
 
 def ultra_volume_2_mesh(
-    volume_path: str,
+    volume_path_stem: str,
     output_directory: str,
-    smooth_factor: int,
-    iso_value: int,
     smooth_iterations: int,
+    iso_value_min: int = 1,
+    iso_value_max: int = 256,
 ) -> None:
     """
     Calls Ultraliser/ultraVolume2Mesh with the option --optimize-mesh and some user-defined options.
@@ -93,38 +94,39 @@ def ultra_volume_2_mesh(
     See https://bbpcode.epfl.ch/browse/code/viz/Ultraliser/tree/apps/ultraVolume2Mesh.
 
     Args:
-        volume_path: value of the --volume-path option (path to an .img file).
-        output_directory: value of the --output-directory option (path to a directory).
-        smooth_factor: value of the --smooth-factor option.
-        iso_value: value of the --iso-value option (should be 1 for a binary image).
-        smooth_iteration: value of the --smooth-iterations option.
+        volume_path_stem: value of the --volume option, except for its .hdr extension
+        joutput_directory: value of the --output-directory option (path to a directory).
+        smooth_iterations: value of the --smooth-iterations option.
+        iso_value_min: value of the minimum iso-value; defaults to 1.
+        iso_value_max: value of the maximum iso-value; defaults to 256.
     Raises:
         UlraliserException if the executable ultraVolume2mesh cannot be found.
     """
     # Retrieve Ultraliser/ultraVolume2mesh path
     ultra_volume_2_mesh_path = _get_ultra_volume_2_mesh_path()
 
-    if Path(volume_path).suffix:
-        raise ValueError(
-            "[ultra_volume_2_mesh] "
-            f"The provided option 'volume_path' {volume_path} has a non-empty file extension. "
-            f"The program ultraVolume2mesh expects a filepath without extension."
-        )
+    # Arguments changed here to get working with Ultraliser 0.4.0 as of 2023-05-04, see
+    # https://bbpteam.epfl.ch/project/issues/browse/VIZTM-1251
+    # including that it now expects an .HDR file extension for the input file!
     subprocess.check_output(
         [
             ultra_volume_2_mesh_path,
-            "--volume-path",
-            volume_path,
-            "--iso-value",
-            str(iso_value),
-            "--export-obj",
-            "--optimize-mesh",
-            "--smooth-iterations",
-            str(smooth_iterations),
-            "--smooth-factor",
-            str(smooth_factor),
+            "--volume",
+            str(volume_path_stem + ".hdr"),
             "--output-directory",
             output_directory,
+            "--iso-option range",
+            "--min-value",
+            str(iso_value_min),
+            "--max-value",
+            str(iso_value_max),
+            "--smooth-iterations",
+            str(smooth_iterations),
+            "--export-obj-mesh",
+            "--project-xy",
+            "--project-xz",
+            "--project-zy",
+            "--optimize-mesh",
         ]
     )
 
@@ -195,34 +197,37 @@ def create_watertight_trimesh(
     optimized_mesh = None  # The mesh to be returned.
     unoptimized_mesh = None
     with tempfile.TemporaryDirectory() as tempdir:
-        # ultraVolume2Mesh requires a name without file extension.
-        volume_path = str(Path(tempdir, "binary_image"))
+        volume_path_stem = str(Path(tempdir, "binary_image"))
         # Write image to disk for later use by ultraliser.
-        _write_numpy_array_to_img_file(binary_image, volume_path)
-        # ultraVolume2Mesh writes the resulting meshes to two output files
-        # (optimized and unoptimized).
-        # The output filenames follow these patterns:
-        # <volume path>_<iso value>.obj (unoptimized).
-        # <volume path>_<iso value>_optimized.obj (optimized).
-        iso_value = 1
+        _write_numpy_array_to_img_file(binary_image, volume_path_stem)
+        # ultraVolume2Mesh writes the resulting meshes to four output files in the following order:
+        # 1. <volume path stem>-dmc.obj
+        # 2. <volume path stem>-laplacian.obj
+        # 3. <volume path stem>-optimized.obj
+        # 4. <volume path stem>-watertight.obj
+        iso_value_min = 1
+        iso_value_max = 256
         ultra_volume_2_mesh(
-            volume_path=volume_path,
+            volume_path_stem=volume_path_stem,
             output_directory=tempdir,
-            smooth_factor=15,
-            iso_value=iso_value,
             smooth_iterations=15,
+            iso_value_min=iso_value_min,
+            iso_value_max=iso_value_max,
         )
         # The format of the following filepaths is imposed by Ultraliser.
-        output_filepath_opt = volume_path + "_" + str(iso_value) + "_" + "optimized.obj"
-        output_filepath_unopt = output_filepath_opt.replace("_optimized", "")
-        for filepath in [output_filepath_unopt, output_filepath_opt]:
+        output_mesh_stem = str(Path(tempdir, "meshes/", "binary_image"))
+        output_filepath_opt = output_mesh_stem + "-" + "optimized.obj"
+        output_filepath_unopt = output_mesh_stem + "-" + "laplacian.obj"
+        output_filepath_wtrt = output_mesh_stem + "-" + "watertight.obj"
+        for filepath in [output_filepath_opt, output_filepath_unopt, output_filepath_wtrt]:
             if not Path(filepath).exists():
                 raise AtlasPlacementHintsError(f"Ultraliser failed to generate the mesh {filepath}")
         unoptimized_mesh = trimesh.load_mesh(output_filepath_unopt)
         optimized_mesh = trimesh.load_mesh(output_filepath_opt)
+        watertight_mesh = trimesh.load_mesh(output_filepath_wtrt)
 
     if optimization_info:
         log_mesh_optimization_info(optimized_mesh, unoptimized_mesh)
 
-    optimized_mesh.fix_normals()
-    return optimized_mesh
+    watertight_mesh.fix_normals()
+    return watertight_mesh
