@@ -35,6 +35,10 @@ if TYPE_CHECKING:  # pragma: no cover
     import trimesh  # type: ignore
     from voxcell import RegionMap, VoxelData  # type: ignore
 
+# AES These are needed
+import trimesh
+from voxcell import VoxelData
+
 logging.basicConfig(level=logging.INFO)
 L = logging.getLogger(__name__)
 
@@ -213,16 +217,16 @@ class MeshBasedLayeredAtlas(AbstractLayeredAtlas):
 
         return meshes
 
-    def _compute_dists_and_obtuse_angles(self, volume, direction_vectors):
+    def _compute_dists_and_obtuse_angles(self, volume, direction_vectors, hemisphere=LEFT):
         layer_meshes = self.create_layer_meshes(volume)
         # pylint: disable=fixme
         # TODO: compute max_smooth_error and use it as the value of rollback_distance
         # in the call of distances_from_voxels_to_meshes_wrt_dir()
         return distances_from_voxels_to_meshes_wrt_dir(volume, layer_meshes, direction_vectors)
 
-    def _dists_and_obtuse_angles(self, direction_vectors, has_hemispheres=False):
+    def _dists_and_obtuse_angles(self, direction_vectors, has_hemispheres=False, thalamus_meshes_dir: str = None):
         if not has_hemispheres:
-            return self._compute_dists_and_obtuse_angles(self.volume, direction_vectors)
+            return self._compute_dists_and_obtuse_angles(self.volume, direction_vectors, thalamus_meshes_dir=thalamus_meshes_dir)
         # Processing each hemisphere individually
         hemisphere_distances = []
         hemisphere_volumes = split_into_halves(self.volume)
@@ -237,7 +241,7 @@ class MeshBasedLayeredAtlas(AbstractLayeredAtlas):
                 self.metadata["region"]["name"],
             )
             dists_to_layer_meshes, obtuse = self._compute_dists_and_obtuse_angles(
-                hemisphere_volumes[hemisphere], direction_vectors
+                hemisphere_volumes[hemisphere], direction_vectors, thalamus_meshes_dir=thalamus_meshes_dir, hemisphere=hemisphere
             )
             hemisphere_distances.append(dists_to_layer_meshes)
             hemisphere_obtuse_angles.append(obtuse)
@@ -257,6 +261,7 @@ class MeshBasedLayeredAtlas(AbstractLayeredAtlas):
         direction_vectors: FloatArray,
         has_hemispheres: bool = True,
         flip_direction_vectors: bool = False,
+        thalamus_meshes_dir: str = None,
     ) -> Dict[str, Union[FloatArray, BoolArray]]:
         """
         Compute distances from voxels to layers boundaries wrt to direction vectors.
@@ -273,6 +278,9 @@ class MeshBasedLayeredAtlas(AbstractLayeredAtlas):
             flip_direction_vectors: True if the direction vectors should
                 be reverted, False otherwise. This flag needs to be set to True
                 depending on the algorithm used to generated orientation.nrrd.
+            thalamus_meshes_dir: (optional) Path of the directory to load thalamus meshes
+                from. Currently only used for thalamus. Required if you are producing thalamus
+                placement-hints. Defaults to None.
 
         Returns:
             distances_info: dict with the following entries.
@@ -287,7 +295,7 @@ class MeshBasedLayeredAtlas(AbstractLayeredAtlas):
             direction_vectors = -direction_vectors
 
         distances_to_layer_meshes, obtuse_angles = self._dists_and_obtuse_angles(
-            direction_vectors, has_hemispheres
+            direction_vectors, has_hemispheres, thalamus_meshes_dir=thalamus_meshes_dir
         )
         L.info("Fixing disordered distances ...")
         fix_disordered_distances(distances_to_layer_meshes)
@@ -306,30 +314,191 @@ class ThalamusAtlas(MeshBasedLayeredAtlas):
     The second layer of the thalamus, that is, the complement of the reticular nucleus,
     cannot be defined via a simple regular expression because the thalamus (id = 549, non-leaf)
     has voxels with labels 549 in both AIBS CCFv2 and CCFv3 mouse brain models.
+
+    <original comment ends here>
+    (AES, <2023-06-28 Wed>: I'm not sure the above comment applies anymore due to our recent,
+    in-progress creation of leaf-only annotations, but nonetheless the thalamus is a special case
+    for making its placement-hints.)
+
+    If you're reading this, you're probably making new thalamus meshes because the annotation has
+    changed or some other reason. Generating placement-hints for the thalamus has been changed, and
+    now requires a manual step. You should do the following steps:
+
+    1. Pass both the argument '--thalamus-meshes-dir /your/folder/here' and the flag
+        '--create-uncut-thalamus-meshes' to the top-level CLI command 'atlas-placement-hints
+        thalamus'. This will create the meshes, but NOT the placement-hints, and the program will
+        exit.
+
+    2. MANUALLY cut the reticular meshes into the 'top' and 'bottom' halves (aka the inner and outer
+        halves if looking outwards from the center of the thalamus) using something like Blender. Do
+        this for each hemisphere. The RT region 'top' and 'bottom' halves are curvy and complex
+        enough that it was decided that manual cutting was the most effective / efficient way to get
+        a good mesh layer for the thalamus placement-hints, since the previous computational way
+        included too many holes due to the curviness. To do the cutting in Blender, see the project
+        mentioned above for an example. What you want is to import each reticular mesh, select 'Edit
+        Mode' in the upper left corner, select either the 'inner' (bottom) or 'outer' (top) half of
+        that hemisphere's reticular mesh, then click 'Mesh > Separate > Selection' (hotkey capital
+        P), then 'File > Export' into its own file, making sure to click the box that says
+        'Selection Only' in the export prompt. Note that this is a different operation than
+        'splitting'. There are many tutorials on Youtube for how to do this. In the outgoing
+        filename, change 'original' to 'handcut'; you should end up with four new files:
+        'reticular_nucleus_mesh_left_hemisphere_bottom_handcut.stl',
+        'reticular_nucleus_mesh_left_hemisphere_top_handcut.stl',
+        'reticular_nucleus_mesh_right_hemisphere_bottom_handcut.stl', and
+        'reticular_nucleus_mesh_right_hemisphere_top_handcut.stl'.
+
+    3. Re-run the top-level command 'atlas-placement-hints thalamus' but this time with both the
+        argument '--thalamus-meshes-dir /your/folder/here' and the flag
+        '--load-cut-thalamus-meshes'. This will NOT create the meshes, but WILL create the
+        placement-hints using your newly handcut meshes! Note that this must be done using a compute
+        node with at least as much RAM as that of 'memory_bound' in
+        'atlas-placement-hints/atlas_placement_hints/distances/utils.py:memory_efficient_intersection()',
+        otherwise this WILL fail silently! With 'memory_bound' set to 300, if your meshes are not
+        very optimized (e.g. using ultraliser's default 1 '--optimization-iterations'), and have a
+        similar number of faces to RT mask surface voxels, this should take approximately 1.5 hours
+        for the whole thing. If your meshes are more optimized, this can significantly speed up the
+        process.
+
     """
 
-    def create_layer_meshes(self, layered_volume: NDArray[np.integer]) -> List["trimesh.Trimesh"]:
+    def create_uncut_thalamus_meshes(self, thalamus_meshes_dir: str):
         """
         Create meshes representing the upper boundary of each layer of the thalamus atlas.
+
+        Because the lower boundary of the thalamus is too irregular to obtain meaningful
+        ray-mesh interesections, we consider instead its convex hull, which provides us with a
+        smooth approximation. See pictures and discussion of
+        https://bbpteam.epfl.ch/project/issues/browse/NSETM-1433
+
+        <original comment ends here>
+        AES <2023-06-28 Wed>: This now creates meshes that are expected to be manually cut using
+        Blender/etc., as described in the 'ThalamusAtlas' class docstring. Also, note that this
+        creates the 'upper boundary of each layer', but ALSO creates the bottom-most layer as well
+        (see the docstring for 'ThalamusAtlas.load_layer_meshes()' for details).
         """
-        # Because the lower boundary of the thalamus is too irregular to obtain meaningful
-        # ray-mesh interesections, we consider instead its convex hull, which provides us with a
-        # smooth approximation. See pictures and discussion of
-        # https://bbpteam.epfl.ch/project/issues/browse/NSETM-1433
-        thalamus_convex_hull_boundary = get_convex_hull_boundary(layered_volume)
-        hull_mask = detailed_mesh_mask(thalamus_convex_hull_boundary, layered_volume.shape)
-        reticular_nucleus_mesh = create_watertight_trimesh(layered_volume == 1)
-        reticular_nucleus_mesh_top = clip_mesh(reticular_nucleus_mesh, hull_mask)
-        reticular_nucleus_mesh_bottom = clip_mesh(reticular_nucleus_mesh, hull_mask, remainder=True)
+
+        L.info("Currently set to CREATE meshes, but NOT calculate thalamus placement-hints. See 'atlas-placement-hints/atlas_placement_hints/layered_atlas.py:ThalamusAtlas' for details.")
+        hemisphere_volumes = split_into_halves(self.volume)
+        for hemisphere in [LEFT, RIGHT]:
+            if hemisphere == LEFT:
+                hemisphere_string = "left"
+            elif hemisphere == RIGHT:
+                hemisphere_string = "right"
+            L.info(
+                "Creating uncut meshes for the %s hemisphere (hemisphere %d) of the %s region ...",
+                hemisphere_string,
+                hemisphere,
+                self.metadata["region"]["name"],
+            )
+
+            # Because the lower boundary of the thalamus is too irregular to obtain meaningful
+            # ray-mesh interesections, we consider instead its convex hull, which provides us with a
+            # smooth approximation. See pictures and discussion of
+            # https://bbpteam.epfl.ch/project/issues/browse/NSETM-1433
+            thalamus_convex_hull_boundary = get_convex_hull_boundary(hemisphere_volumes[hemisphere])
+            hull_mask = detailed_mesh_mask(thalamus_convex_hull_boundary, hemisphere_volumes[hemisphere].shape)
+            reticular_nucleus_mesh = create_watertight_trimesh(hemisphere_volumes[hemisphere] == 1)
+            reticular_nucleus_mesh_top = clip_mesh(reticular_nucleus_mesh, hull_mask)
+            reticular_nucleus_mesh_bottom = clip_mesh(reticular_nucleus_mesh, hull_mask, remainder=True)
+            reticular_nucleus_mesh_bottom.invert()
+            overall_bottom = clip_mesh(
+                thalamus_convex_hull_boundary,
+                ~detailed_mesh_mask(reticular_nucleus_mesh, hemisphere_volumes[hemisphere].shape),
+            )
+            overall_bottom.fix_normals()
+            overall_bottom.invert()
+
+            thalamus_convex_hull_boundary.export(
+                os.path.join(thalamus_meshes_dir,
+                             "thalamus_convex_hull_boundary_{}_hemisphere_original.stl".format(hemisphere_string)))
+            reticular_nucleus_mesh.export(
+                os.path.join(thalamus_meshes_dir,
+                             "reticular_nucleus_mesh_{}_hemisphere_original.stl".format(hemisphere_string)))
+            reticular_nucleus_mesh_bottom.export(
+                os.path.join(thalamus_meshes_dir,
+                             "reticular_nucleus_mesh_{}_hemisphere_bottom_original.stl".format(hemisphere_string)))
+            reticular_nucleus_mesh_top.export(
+                os.path.join(thalamus_meshes_dir,
+                             "reticular_nucleus_mesh_{}_hemisphere_top_original.stl".format(hemisphere_string)))
+            overall_bottom.export(
+                os.path.join(thalamus_meshes_dir,
+                             "overall_bottom_{}_hemisphere_original.stl".format(hemisphere_string)))
+
+        L.info("Finished creating and saving meshes for both hemispheres. Exiting.")
+        exit()
+
+    def load_layer_meshes(self, layered_volume: NDArray[np.integer], thalamus_meshes_dir: str, hemisphere=LEFT) -> List["trimesh.Trimesh"]:
+        """
+        Load meshes representing the upper boundary of each layer (and the bottom-most layer) of the thalamus atlas.
+
+        Long-winded explanation by AES:
+
+        Inside 'layered_volume', voxels marked 0 belong to 'outside' the relevant volume, and can be
+        thought of as an unused 'Layer 0' that corresponds to the 'uppermost' space that is not
+        considered a 'real' layer (like the 'pia' in cortex).
+
+        Inside 'layered_volume', voxels marked 1 belong to the reticular nucleus (RT), and can be
+        thought of as 'Layer 1' or the 'uppermost' layer we actually care about, similar to cortex
+        L1. In this function, we seek to load a hand-cut 'upper boundary mesh' for this layer,
+        corresponding to the outermost half (loosely speaking) of a mesh of the RT. This upper
+        boundary mesh for Layer 1 (RT) is the first object in the list that is returned by the
+        function.
+
+        Inside 'layered_volume', voxels marked 2 belong to non-RT thalamus, and can be thought of as
+        'Layer 2' or the next-deeper layer, similar to cortex L2. In this function, we seek to
+        load a hand-cut 'upper boundary mesh' for this layer, corresponding to the innermost half
+        (loosely speaking) of a mesh of the RT (since we're assuming there's no gap between RT and
+        nonRT, in general). This upper boundary mesh for Layer 2 (nonRT) is the second object in the
+        list that is returned by this function.
+
+        The final object returned by this function is the 'lower boundary mesh' for the entire
+        volume that we care about, aka the 'lowest boundary mesh'. (Using the previous upper
+        boundaries and this single lower boundary is enough information to compute the distance from
+        anywhere to the nearest upper and lower boundaries of each layer.) Confusingly, and unlike
+        cortex, our lowest boundary is essentially the same as the boundary of Layer 0: the convex
+        hull mesh of the entire thalamus. This is because all the direction vectors in nonRT (our
+        Layer 2) point to RT (our Layer 1), and the origins of those direction vectors are
+        distributed along almost a full half-sphere if looking from RT, at much wider angles than a
+        more laminar structure like the cortex.
+
+        Currently, since the lowest boundary mesh is actually the entire convex hull, that means
+        there are some portions of the mesh where the 'bottom' layer boundary actually sits 'above'
+        the uppermost boundary of the topmost layer! However, this shouldn't cause any problems.
+        """
+        if not thalamus_meshes_dir:
+            L.info("\n --> ERROR: You must pass a directory containing the appropriate meshes to '--thalamus-meshes-dir'. See 'atlas-placement-hints/atlas_placement_hints/layered_atlas.py:ThalamusAtlas' for details. Exiting.\n")
+            exit()
+
+        if hemisphere == LEFT:
+            hemisphere_string = "left"
+        elif hemisphere == RIGHT:
+            hemisphere_string = "right"
+
+        L.info("Loading hand-sliced thalamic reticular nucleus top and bottom meshes of %s hemisphere from '%s'", hemisphere_string, thalamus_meshes_dir)
+
+        reticular_nucleus_mesh_top = trimesh.load_mesh(
+            os.path.join(thalamus_meshes_dir,
+                         "reticular_nucleus_mesh_{}_hemisphere_top_handcut.stl".format(hemisphere_string)))
+
+        reticular_nucleus_mesh_bottom = trimesh.load_mesh(
+            os.path.join(thalamus_meshes_dir,
+                         "reticular_nucleus_mesh_{}_hemisphere_bottom_handcut.stl".format(hemisphere_string)))
+        # We have to invert the normals of the bottom mesh faces after hand-cutting, since by
+        # default they face "outward", not "inward" like we want (so they can align with the
+        # direction vectors)
         reticular_nucleus_mesh_bottom.invert()
-        overall_bottom = clip_mesh(
-            thalamus_convex_hull_boundary,
-            ~detailed_mesh_mask(reticular_nucleus_mesh, layered_volume.shape),
-        )
-        overall_bottom.fix_normals()
-        overall_bottom.invert()
+
+        overall_bottom = trimesh.load_mesh(
+            os.path.join(thalamus_meshes_dir,
+                         "overall_bottom_{}_hemisphere_original.stl".format(hemisphere_string)))
 
         return [reticular_nucleus_mesh_top, reticular_nucleus_mesh_bottom, overall_bottom]
+
+    def _compute_dists_and_obtuse_angles(self, volume, direction_vectors, hemisphere=LEFT, thalamus_meshes_dir: str = None):
+        # Note that this is LOADING meshes, not creating them!
+        L.info("Currently set to LOAD meshes and calculate thalamus placement-hints. See 'atlas-placement-hints/atlas_placement_hints/layered_atlas.py:ThalamusAtlas' for details.")
+        layer_meshes = self.load_layer_meshes(volume, thalamus_meshes_dir, hemisphere)
+        return distances_from_voxels_to_meshes_wrt_dir(volume, layer_meshes, direction_vectors)
 
 
 class VoxelBasedLayeredAtlas(AbstractLayeredAtlas):

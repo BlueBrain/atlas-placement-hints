@@ -74,6 +74,7 @@ def _placement_hints(  # pylint: disable=too-many-locals
     max_thicknesses: Optional[List[float]] = None,
     flip_direction_vectors: bool = False,
     has_hemispheres: bool = False,
+    thalamus_meshes_dir: str = None,
 ) -> None:
     """
     Compute the placement hints for a laminar region of the mouse brain.
@@ -93,6 +94,10 @@ def _placement_hints(  # pylint: disable=too-many-locals
         has_hemispheres: (optional) If True, split the volume into halves along the z-axis and
             handle each of theses 'hemispheres' separately. Otherwise the whole volume is handled.
             Defaults to True.
+        thalamus_meshes_dir: (optional) Path of the directory to load thalamus meshes
+            from. Currently only used for thalamus. Required if you are producing thalamus
+            placement-hints. Defaults to None.
+
     """
     direction_vectors = voxcell.VoxelData.load_nrrd(direction_vectors_path)
     assert_meta_properties([direction_vectors, atlas.region])
@@ -106,6 +111,7 @@ def _placement_hints(  # pylint: disable=too-many-locals
         max_thicknesses,
         flip_direction_vectors=flip_direction_vectors,
         has_hemispheres=has_hemispheres,
+        thalamus_meshes_dir=thalamus_meshes_dir,
     )
     if not Path(output_dir).exists():
         os.makedirs(output_dir)
@@ -305,18 +311,41 @@ def isocortex(
     required=True,
     help="path of the directory to write. It will be created if it doesn't exist.",
 )
+@click.option(
+    "--thalamus-meshes-dir",
+    required=True,
+    help="Path of the directory to use for either saving or loading thalamus meshes. It will be created if it doesn't exist.",
+)
+@click.option(
+    "--create-uncut-thalamus-meshes-flag",
+    required=False,
+    help="(Optional) Flag to create the initial thalamus meshes for manual cutting later. This will not produce placement-hints. You MUST pass either this flag or '--load-cut-thalamus-meshes-flag'.",
+    default=False,
+    is_flag=True,
+)
+@click.option(
+    "--load-cut-thalamus-meshes-flag",
+    required=False,
+    help="(Optional) Flag to load your custom thalamus meshes, and then use them to calculate placement-hints. You MUST pass either this flag or '--create-uncut-thalamus-meshes-flag'.",
+    default=False,
+    is_flag=True,
+)
 @log_args(L)
 def thalamus(
-    verbose, annotation_path, hierarchy_path, metadata_path, direction_vectors_path, output_dir
+    verbose, annotation_path, hierarchy_path, metadata_path, direction_vectors_path, output_dir,
+    thalamus_meshes_dir, create_uncut_thalamus_meshes_flag, load_cut_thalamus_meshes_flag
 ):
     """Generate and save the placement hints of the mouse thalamus.
 
-    Placement hints are saved under the names sepecified in `app/metadata/thalamus_metadata.json`.
+    Note that you MUST pass either '--create-uncut-thalamus-meshes-flag' or '--load-cut-thalamus-meshes-flag'.
+
+    Placement hints are saved under the names specified in `app/metadata/thalamus_metadata.json`.
     Default to:
 
     \b
     - `[PH]y.nrrd`
-    - `[PH]Rt.nrrd`, `[PH]VPL.nrrd`
+    - `[PH]RT.nrrd` (used analogously to "layer 1")
+    - `[PH]THnotRT.nrrd` (used analogously to "layer 2", the deepest layer for thalamus)
 
     A report together with an nrrd volume on problematic distance computations are generated
     in `output_dir` under the names:
@@ -330,16 +359,29 @@ def thalamus(
     The annotation file can contain the thalamus or a superset.
     For the algorithm to work properly, some space should separate the boundary
     of the thalamus from the boundary of its enclosing array.
+
+    For instructions on all steps necessary to generate the thalamus' placement hints, see
+    'atlas-placement-hints/atlas_placement_hints/layered_atlas.py:ThalamusAtlas' and its methods for
+    details.
     """
     set_verbose(L, verbose)
 
     atlas = _create_layered_atlas(annotation_path, hierarchy_path, metadata_path)
-    _placement_hints(
-        atlas,
-        direction_vectors_path,
-        output_dir,
-        has_hemispheres=True,
-    )
+
+    if create_uncut_thalamus_meshes_flag:
+        Path(thalamus_meshes_dir).mkdir(parents=True, exist_ok=True)
+        atlas.create_uncut_thalamus_meshes(thalamus_meshes_dir)
+    elif load_cut_thalamus_meshes_flag:
+        _placement_hints(
+            atlas,
+            direction_vectors_path,
+            output_dir,
+            thalamus_meshes_dir=thalamus_meshes_dir,
+            has_hemispheres=True,
+        )
+    else:
+        print("\n--> ERROR: You MUST pass either '--create-uncut-thalamus-meshes-flag' or '--load-cut-thalamus-meshes-flag'. Exiting.\n")
+        exit()
 
 
 @app.command()

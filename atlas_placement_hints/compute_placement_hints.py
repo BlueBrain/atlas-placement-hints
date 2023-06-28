@@ -27,6 +27,7 @@ def compute_placement_hints(
     max_thicknesses: Optional[List[float]] = None,
     flip_direction_vectors: bool = False,
     has_hemispheres: bool = True,
+    thalamus_meshes_dir: str = None,
 ) -> Tuple[DistanceInfo, Dict]:
     """
     Compute the placement hints for a laminar region of the mouse brain.
@@ -43,6 +44,9 @@ def compute_placement_hints(
         has_hemispheres: (optional) If True, split the volume into halves along the z-axis and
             handle each of theses 'hemispheres' separately. Otherwise the whole volume is
             handled. Defaults to True.
+        thalamus_meshes_dir: (optional) Path of the directory to load thalamus meshes
+            from. Currently only used for thalamus. Required if you are producing thalamus
+            placement-hints. Defaults to None.
 
     Returns:
         Tuple with the following items.
@@ -70,6 +74,7 @@ def compute_placement_hints(
         direction_vectors,
         flip_direction_vectors=flip_direction_vectors,
         has_hemispheres=has_hemispheres,
+        thalamus_meshes_dir=thalamus_meshes_dir,
     )
 
     distances_to_meshes = distances_info["distances_to_layer_boundaries"]
