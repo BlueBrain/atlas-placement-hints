@@ -11,5 +11,11 @@
         "queries": ["@.*1[ab]?$", "@.*2[ab]?$", "@.*[^/]3[ab]?$", "@.*4[ab]?$", "@.*5[ab]?$", "@.*6[ab]?$"],
         "attribute": "acronym",
         "with_descendants": true
+    },
+    "ignore":{
+        "name":"SSp-bfd",
+        "query": "SSp-bfd-[^-]*$",
+        "attribute": "acronym",
+        "with_descendants": true
     }
 }
