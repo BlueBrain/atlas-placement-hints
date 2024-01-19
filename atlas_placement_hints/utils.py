@@ -197,7 +197,7 @@ def indexable(
 
 
 def clip_mesh(
-    mesh: "trimesh.Mesh",
+    mesh: "trimesh.Trimesh",
     mask: BoolArray,
     remainder: bool = False,
     dilation: int = 5,
