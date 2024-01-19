@@ -1,4 +1,4 @@
-.. image:: atlas-placement-hints.jpg
+|banner|
 
 Overview
 =========
@@ -74,3 +74,6 @@ Copyright © 2022 Blue Brain Project/EPFL
 .. _Ultraliser: https://github.com/BlueBrain/Ultraliser
 .. _`atlas-splitter`: https://github.com/BlueBrain/atlas-splitter
 
+.. substitutions
+
+.. |banner| image:: doc/source/static/atlas-placement-hints.jpg
