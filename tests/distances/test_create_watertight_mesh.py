@@ -57,7 +57,7 @@ class Test_create_watertight_mesh(unittest.TestCase):
             assert Path("mask.hdr").exists()
             with open("mask.hdr", "r", encoding="utf-8") as mask_header:
                 content = mask_header.read()
-                assert content == "3 4 5"
+                assert content == "uchar\n3 4 5"
             os.chdir(prev_dir)
 
     @patch(

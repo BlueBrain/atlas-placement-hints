@@ -41,13 +41,14 @@ def _write_numpy_array_to_img_file(img_array: BoolArray, filename: str) -> None:
         filename + ".nrrd",
         np.uint8(img_array),
         header={"encoding": "raw"},
-        detached_header=True,  # ultraVolum2Mesh cannot read embedded headers.
+        detached_header=True,  # ultraVolume2Mesh cannot read embedded headers.
     )
     os.rename(filename + ".nrrd", filename + ".img")
     os.remove(filename + ".nhdr")
-    # Create a one-line header file for ultraVolume2Mesh containing only the shape of the 3D array.
+    # Create a two-line header file for ultraVolume2Mesh containing only the type and shape.
     header = filename + ".hdr"
     with open(header, "w", encoding="utf-8") as file_:
+        file_.write("uchar\n")
         file_.write(" ".join([str(d) for d in img_array.shape]))
 
 
@@ -81,9 +82,7 @@ def _get_ultra_volume_2_mesh_path() -> str:
 def ultra_volume_2_mesh(
     volume_path: str,
     output_directory: str,
-    smooth_factor: int,
-    iso_value: int,
-    smooth_iterations: int,
+    optimization_iterations: int,
 ) -> None:
     """
     Calls Ultraliser/ultraVolume2Mesh with the option --optimize-mesh and some user-defined options.
@@ -93,40 +92,33 @@ def ultra_volume_2_mesh(
     See https://bbpcode.epfl.ch/browse/code/viz/Ultraliser/tree/apps/ultraVolume2Mesh.
 
     Args:
-        volume_path: value of the --volume-path option (path to an .img file).
+        volume_path: value of the --volume-path option (path to an .hdr file).
         output_directory: value of the --output-directory option (path to a directory).
-        smooth_factor: value of the --smooth-factor option.
-        iso_value: value of the --iso-value option (should be 1 for a binary image).
-        smooth_iteration: value of the --smooth-iterations option.
+        optimization_iteration: value of the --optimization-iterations option.
     Raises:
         UlraliserException if the executable ultraVolume2mesh cannot be found.
     """
     # Retrieve Ultraliser/ultraVolume2mesh path
-    ultra_volume_2_mesh_path = _get_ultra_volume_2_mesh_path()
-
-    if Path(volume_path).suffix:
-        raise ValueError(
-            "[ultra_volume_2_mesh] "
-            f"The provided option 'volume_path' {volume_path} has a non-empty file extension. "
-            f"The program ultraVolume2mesh expects a filepath without extension."
-        )
-    subprocess.check_output(
+    # ultra_volume_2_mesh_path = _get_ultra_volume_2_mesh_path()
+    ultra_volume_2_mesh_path = "/gpfs/bbp.cscs.ch/home/arnaudon/spack_install/software/install_gcc-12.2.0-skylake/ultraliser-0.4.1-xlywda/bin/ultraVolume2Mesh"
+    proc = subprocess.Popen(
         [
             ultra_volume_2_mesh_path,
-            "--volume-path",
+            "--volume",
             volume_path,
+            "--iso-option",
+            "value",
             "--iso-value",
-            str(iso_value),
-            "--export-obj",
+            "1",
+            "--export-obj-mesh",
             "--optimize-mesh",
-            "--smooth-iterations",
-            str(smooth_iterations),
-            "--smooth-factor",
-            str(smooth_factor),
+            "--optimization-iterations",
+            "5",
             "--output-directory",
             output_directory,
-        ]
-    )
+        ],
+        text=True,
+    ).communicate()
 
 
 def mean_min_dist(points_1: FloatArray, points_2: FloatArray, sample_size: int = 1000) -> float:
@@ -176,8 +168,7 @@ def log_mesh_optimization_info(
 
 
 def create_watertight_trimesh(
-    binary_image: BoolArray,
-    optimization_info: bool = False,
+    binary_image: BoolArray, optimization_info: bool = False, id=0
 ) -> trimesh.base.Trimesh:
     """
     Create a watertight triangle mesh out of a 3D binary image.
@@ -195,26 +186,25 @@ def create_watertight_trimesh(
     optimized_mesh = None  # The mesh to be returned.
     unoptimized_mesh = None
     with tempfile.TemporaryDirectory() as tempdir:
+        tempdir = f"tmp_{id}"
+        Path(tempdir).mkdir(parents=True, exist_ok=True)
         # ultraVolume2Mesh requires a name without file extension.
         volume_path = str(Path(tempdir, "binary_image"))
         # Write image to disk for later use by ultraliser.
         _write_numpy_array_to_img_file(binary_image, volume_path)
-        # ultraVolume2Mesh writes the resulting meshes to two output files
-        # (optimized and unoptimized).
-        # The output filenames follow these patterns:
-        # <volume path>_<iso value>.obj (unoptimized).
-        # <volume path>_<iso value>_optimized.obj (optimized).
-        iso_value = 1
         ultra_volume_2_mesh(
-            volume_path=volume_path,
+            volume_path=volume_path + ".hdr",
             output_directory=tempdir,
-            smooth_factor=15,
-            iso_value=iso_value,
-            smooth_iterations=15,
+            optimization_iterations=5,
         )
         # The format of the following filepaths is imposed by Ultraliser.
-        output_filepath_opt = volume_path + "_" + str(iso_value) + "_" + "optimized.obj"
-        output_filepath_unopt = output_filepath_opt.replace("_optimized", "")
+        _volume_path = Path(volume_path)
+        output_filepath_opt = (
+            _volume_path.parent / "meshes" / (str(_volume_path.stem) + "-watertight.obj")
+        )
+        output_filepath_unopt = (
+            _volume_path.parent / "meshes" / (str(_volume_path.stem) + "-dmc.obj")
+        )
         for filepath in [output_filepath_unopt, output_filepath_opt]:
             if not Path(filepath).exists():
                 raise AtlasPlacementHintsError(f"Ultraliser failed to generate the mesh {filepath}")

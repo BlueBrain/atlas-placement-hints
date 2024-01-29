@@ -187,7 +187,7 @@ class MeshBasedLayeredAtlas(AbstractLayeredAtlas):
         )
         meshes = []
         for index in tqdm(layers_values):
-            mesh = create_watertight_trimesh(layered_volume >= index)
+            mesh = create_watertight_trimesh(layered_volume >= index, id=index)
             meshes.append(mesh)
 
         L.info(
@@ -199,7 +199,7 @@ class MeshBasedLayeredAtlas(AbstractLayeredAtlas):
         # Inverting normals as we select the complement of the layered atlas
         full_mesh_bottom.invert()
         meshes.append(full_mesh_bottom)
-        for i, mesh in tqdm(enumerate(meshes)):
+        for i, mesh in tqdm(enumerate(meshes), total=len(meshes)):
             newmesh = centroid_outfacing_mesh(mesh)
             # This sometimes results in isolated faces which
             # cause ray intersection to fail.
