@@ -186,6 +186,8 @@ def create_watertight_trimesh(
     optimized_mesh = None  # The mesh to be returned.
     unoptimized_mesh = None
     with tempfile.TemporaryDirectory() as tempdir:
+        tempdir = f"tmp_{id}"
+        Path(tempdir).mkdir(parents=True, exist_ok=True)
         # ultraVolume2Mesh requires a name without file extension.
         volume_path = str(Path(tempdir, "binary_image"))
         # Write image to disk for later use by ultraliser.

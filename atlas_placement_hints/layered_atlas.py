@@ -187,7 +187,7 @@ class MeshBasedLayeredAtlas(AbstractLayeredAtlas):
         )
         meshes = []
         for index in tqdm(layers_values):
-            mesh = create_watertight_trimesh(layered_volume >= index)
+            mesh = create_watertight_trimesh(layered_volume >= index, id=index)
             meshes.append(mesh)
 
         L.info(
