@@ -61,7 +61,7 @@ class Test_create_watertight_mesh(unittest.TestCase):
             os.chdir(prev_dir)
 
     @patch(
-        "atlas_placement_hints.distances.create_watertight_mesh.find_executable",
+        "atlas_placement_hints.distances.create_watertight_mesh.which",
         return_value="",
     )
     def test_get_ultra_volume_2_mesh_path_no_install(self, _):
@@ -70,7 +70,7 @@ class Test_create_watertight_mesh(unittest.TestCase):
             assert tested._get_ultra_volume_2_mesh_path()
 
     @patch(
-        "atlas_placement_hints.distances.create_watertight_mesh.find_executable",
+        "atlas_placement_hints.distances.create_watertight_mesh.which",
         return_value=ultra_volume_2_mesh_path,
     )
     def test_get_ultra_volume_2_mesh_path_loaded(self, _):
