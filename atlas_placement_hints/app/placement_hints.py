@@ -1,5 +1,6 @@
 """Generate and save the placement hints of different regions of the AIBS mouse brain
 """
+
 from __future__ import annotations
 
 import json
