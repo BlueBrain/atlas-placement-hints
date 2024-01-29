@@ -340,3 +340,64 @@ def thalamus(
         output_dir,
         has_hemispheres=True,
     )
+
+
+@app.command()
+@verbose_option
+@common_atlas_options
+@click.option(
+    "--metadata-path",
+    type=EXISTING_FILE_PATH,
+    required=False,
+    help=(
+        "(Optional) Path to the metadata json file. Defaults to "
+        f"`{str(METADATA_REL_PATH / 'cerebellum_metadata.json')}`"
+    ),
+    default=str(METADATA_PATH / "cerebellum_metadata.json"),
+)
+@click.option(
+    "--direction-vectors-path",
+    type=EXISTING_FILE_PATH,
+    required=True,
+    help=("Path to the cerebellum direction vectors file, e.g., `direction_vectors.nrrd`."),
+)
+@click.option(
+    "--output-dir",
+    required=True,
+    help="path of the directory to write. It will be created if it doesn't exist.",
+)
+@log_args(L)
+def cerebellum(
+    verbose, annotation_path, hierarchy_path, metadata_path, direction_vectors_path, output_dir
+):
+    """Generate and save the placement hints of the mouse cerebellum.
+
+    Placement hints are saved under the names sepecified in `app/metadata/cerebellum_metadata.json`.
+    Default to:
+
+    \b
+    - `[PH]y.nrrd`
+    - `[PH]CBXmo.nrrd`, `[PH]CBXgr.nrrd`
+
+    A report together with an nrrd volume on problematic distance computations are generated
+    in `output_dir` under the names:
+
+    \b
+    - `distance_report.json`
+    - `<Cerebellum>_problematic_voxel_mask.nrrd` (mask of the voxels for which the computed
+    placement hints cannot be trusted).  <Cerebellum> is the region name specified in
+    cerebellum_metadata.json. Defaults to "Cerebellum".
+
+    The annotation file can contain the cerebellum or a superset.
+    For the algorithm to work properly, some space should separate the boundary
+    of the cerebellum from the boundary of its enclosing array.
+    """
+    set_verbose(L, verbose)
+
+    atlas = _create_layered_atlas(annotation_path, hierarchy_path, metadata_path)
+    _placement_hints(
+        atlas,
+        direction_vectors_path,
+        output_dir,
+        has_hemispheres=True,
+    )
