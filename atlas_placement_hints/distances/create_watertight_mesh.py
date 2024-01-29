@@ -8,8 +8,8 @@ import logging
 import os
 import subprocess
 import tempfile
-from distutils.spawn import find_executable
 from pathlib import Path
+from shutil import which
 
 import nrrd  # type: ignore
 import numpy as np
@@ -57,7 +57,7 @@ def _get_ultra_volume_2_mesh_path() -> str:
     Get the path to the ultraVolume2Mesh executable file.
 
     The function checks if ultraVolume2Mesh is available by means of
-    distutils.spawn.find_executable(). If yes, it returns this path as a string.
+    shutil.which. If yes, it returns this path as a string.
     Otherwise it raises an AtlasPlacementHintsError.
 
     Returns:
@@ -67,7 +67,7 @@ def _get_ultra_volume_2_mesh_path() -> str:
         AtlasPlacementHintsError: if the executable file cannot be found.
 
     """
-    ultra_volume_2_mesh_path = find_executable("ultraVolume2Mesh")
+    ultra_volume_2_mesh_path = which("ultraVolume2Mesh")
     if not ultra_volume_2_mesh_path:
         raise AtlasPlacementHintsError(
             "ultraVolume2Mesh was not found in this system.\n"
@@ -99,9 +99,8 @@ def ultra_volume_2_mesh(
         UlraliserException if the executable ultraVolume2mesh cannot be found.
     """
     # Retrieve Ultraliser/ultraVolume2mesh path
-    # ultra_volume_2_mesh_path = _get_ultra_volume_2_mesh_path()
-    ultra_volume_2_mesh_path = "/gpfs/bbp.cscs.ch/home/arnaudon/spack_install/software/install_gcc-12.2.0-skylake/ultraliser-0.4.1-xlywda/bin/ultraVolume2Mesh"
-    proc = subprocess.Popen(
+    ultra_volume_2_mesh_path = _get_ultra_volume_2_mesh_path()
+    with subprocess.Popen(
         [
             ultra_volume_2_mesh_path,
             "--volume",
@@ -113,12 +112,13 @@ def ultra_volume_2_mesh(
             "--export-obj-mesh",
             "--optimize-mesh",
             "--optimization-iterations",
-            "5",
+            str(optimization_iterations),
             "--output-directory",
             output_directory,
         ],
         text=True,
-    ).communicate()
+    ) as proc:
+        proc.communicate()
 
 
 def mean_min_dist(points_1: FloatArray, points_2: FloatArray, sample_size: int = 1000) -> float:
@@ -168,7 +168,7 @@ def log_mesh_optimization_info(
 
 
 def create_watertight_trimesh(
-    binary_image: BoolArray, optimization_info: bool = False, id=0
+    binary_image: BoolArray, optimization_info: bool = False
 ) -> trimesh.base.Trimesh:
     """
     Create a watertight triangle mesh out of a 3D binary image.
@@ -186,8 +186,6 @@ def create_watertight_trimesh(
     optimized_mesh = None  # The mesh to be returned.
     unoptimized_mesh = None
     with tempfile.TemporaryDirectory() as tempdir:
-        tempdir = f"tmp_{id}"
-        Path(tempdir).mkdir(parents=True, exist_ok=True)
         # ultraVolume2Mesh requires a name without file extension.
         volume_path = str(Path(tempdir, "binary_image"))
         # Write image to disk for later use by ultraliser.
