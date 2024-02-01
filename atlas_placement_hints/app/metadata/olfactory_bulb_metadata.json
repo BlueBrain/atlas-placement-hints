@@ -1,6 +1,6 @@
 {
     "region": {
-        "name": "Main olfactory bulb",
+        "name": "olfactory_bulb",
         "query": "MOB",
         "attribute": "acronym",
         "with_descendants": true
