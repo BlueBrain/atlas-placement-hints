@@ -395,5 +395,5 @@ def olfactory_bulb(
         atlas,
         direction_vectors_path,
         output_dir,
-        has_hemispheres=True,
+        has_hemispheres=False,
     )
