@@ -57,11 +57,11 @@ class Test_create_watertight_mesh(unittest.TestCase):
             assert Path("mask.hdr").exists()
             with open("mask.hdr", "r", encoding="utf-8") as mask_header:
                 content = mask_header.read()
-                assert content == "3 4 5"
+                assert content == "uchar\n3 4 5"
             os.chdir(prev_dir)
 
     @patch(
-        "atlas_placement_hints.distances.create_watertight_mesh.find_executable",
+        "atlas_placement_hints.distances.create_watertight_mesh.which",
         return_value="",
     )
     def test_get_ultra_volume_2_mesh_path_no_install(self, _):
@@ -70,7 +70,7 @@ class Test_create_watertight_mesh(unittest.TestCase):
             assert tested._get_ultra_volume_2_mesh_path()
 
     @patch(
-        "atlas_placement_hints.distances.create_watertight_mesh.find_executable",
+        "atlas_placement_hints.distances.create_watertight_mesh.which",
         return_value=ultra_volume_2_mesh_path,
     )
     def test_get_ultra_volume_2_mesh_path_loaded(self, _):

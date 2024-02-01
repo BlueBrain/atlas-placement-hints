@@ -199,7 +199,7 @@ class MeshBasedLayeredAtlas(AbstractLayeredAtlas):
         # Inverting normals as we select the complement of the layered atlas
         full_mesh_bottom.invert()
         meshes.append(full_mesh_bottom)
-        for i, mesh in tqdm(enumerate(meshes)):
+        for i, mesh in tqdm(enumerate(meshes), total=len(meshes)):
             newmesh = centroid_outfacing_mesh(mesh)
             # This sometimes results in isolated faces which
             # cause ray intersection to fail.
