@@ -351,7 +351,7 @@ def thalamus(
     required=False,
     help=(
         "(Optional) Path to the metadata json file. Defaults to "
-        f"`{str(METADATA_REL_PATH / 'olfactory_bulb_metadata.json')}`"
+        f"`{METADATA_REL_PATH / 'olfactory_bulb_metadata.json'}`"
     ),
     default=str(METADATA_PATH / "olfactory_bulb_metadata.json"),
 )
