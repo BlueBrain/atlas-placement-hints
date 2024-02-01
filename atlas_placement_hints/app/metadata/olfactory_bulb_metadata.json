@@ -1,0 +1,15 @@
+{
+    "region": {
+        "name": "Main olfactory bulb",
+        "query": "MOB",
+        "attribute": "acronym",
+        "with_descendants": true
+
+    },
+    "layers": {
+        "names": ["MOBgl", "MOBgr", "MOBipl", "MOBmi", "MOBopl"],
+        "queries": ["MOBgl", "MOBgr", "MOBipl", "MOBmi", "MOBopl"],
+        "attribute": "acronym",
+        "with_descendants": false
+    }
+}
