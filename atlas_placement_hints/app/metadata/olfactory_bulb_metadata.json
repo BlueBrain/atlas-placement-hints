@@ -7,8 +7,8 @@
 
     },
     "layers": {
-        "names": ["MOBgl", "MOBgr", "MOBipl", "MOBmi", "MOBopl"],
-        "queries": ["MOBgl", "MOBgr", "MOBipl", "MOBmi", "MOBopl"],
+        "names": ["MOBgl", "MOBopl", "MOBmi", "MOBipl", "MOBgr"],
+        "queries": ["MOBgl", "MOBopl", "MOBmi", "MOBipl", "MOBgr"],
         "attribute": "acronym",
         "with_descendants": false
     }
