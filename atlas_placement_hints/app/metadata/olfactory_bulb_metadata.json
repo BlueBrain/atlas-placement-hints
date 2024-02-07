@@ -1,0 +1,15 @@
+{
+    "region": {
+        "name": "olfactory_bulb",
+        "query": "MOB",
+        "attribute": "acronym",
+        "with_descendants": true
+
+    },
+    "layers": {
+        "names": ["MOBgl", "MOBopl", "MOBmi", "MOBipl", "MOBgr"],
+        "queries": ["MOBgl", "MOBopl", "MOBmi", "MOBipl", "MOBgr"],
+        "attribute": "acronym",
+        "with_descendants": false
+    }
+}
