@@ -26,6 +26,7 @@ from atlas_placement_hints.layered_atlas import (
     AbstractLayeredAtlas,
     MeshBasedLayeredAtlas,
     ThalamusAtlas,
+    CerebellumAtlas,
     VoxelBasedLayeredAtlas,
     save_problematic_voxel_mask,
 )
@@ -60,6 +61,8 @@ def _create_layered_atlas(
 
     if metadata["region"]["name"] == "Thalamus":
         return ThalamusAtlas(annotation, region_map, metadata)
+    if metadata["region"]["name"] == "Cerebellum":
+        return CerebellumAtlas(annotation, region_map, metadata)
 
     if algorithm == "voxel-based":
         return VoxelBasedLayeredAtlas(annotation, region_map, metadata)

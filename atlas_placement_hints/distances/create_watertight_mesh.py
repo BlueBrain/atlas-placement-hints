@@ -168,7 +168,7 @@ def log_mesh_optimization_info(
 
 
 def create_watertight_trimesh(
-    binary_image: BoolArray, optimization_info: bool = False
+    binary_image: BoolArray, optimization_info: bool = False, mesh_name=None
 ) -> trimesh.base.Trimesh:
     """
     Create a watertight triangle mesh out of a 3D binary image.
@@ -186,16 +186,12 @@ def create_watertight_trimesh(
     optimized_mesh = None  # The mesh to be returned.
     unoptimized_mesh = None
     with tempfile.TemporaryDirectory() as tempdir:
-        # ultraVolume2Mesh requires a name without file extension.
-        volume_path = str(Path(tempdir, "binary_image"))
-        # Write image to disk for later use by ultraliser.
-        _write_numpy_array_to_img_file(binary_image, volume_path)
-        ultra_volume_2_mesh(
-            volume_path=volume_path + ".hdr",
-            output_directory=tempdir,
-            optimization_iterations=5,
-        )
+        mesh_name = mesh_name.replace(' ', '_')
+        tempdir = Path('tmp') / f"mesh_{mesh_name}" if mesh_name is not None else tempdir
+        tempdir.mkdir(parents=True, exist_ok=True)
+
         # The format of the following filepaths is imposed by Ultraliser.
+        volume_path = str(Path(tempdir, "binary_image"))
         _volume_path = Path(volume_path)
         output_filepath_opt = (
             _volume_path.parent / "meshes" / (str(_volume_path.stem) + "-watertight.obj")
@@ -203,6 +199,16 @@ def create_watertight_trimesh(
         output_filepath_unopt = (
             _volume_path.parent / "meshes" / (str(_volume_path.stem) + "-dmc.obj")
         )
+        if not output_filepath_opt.exists():
+            # ultraVolume2Mesh requires a name without file extension.
+            # Write image to disk for later use by ultraliser.
+            _write_numpy_array_to_img_file(binary_image, volume_path)
+            ultra_volume_2_mesh(
+                volume_path=volume_path + ".hdr",
+                output_directory=tempdir,
+                optimization_iterations=5,
+            )
+
         for filepath in [output_filepath_unopt, output_filepath_opt]:
             if not Path(filepath).exists():
                 raise AtlasPlacementHintsError(f"Ultraliser failed to generate the mesh {filepath}")

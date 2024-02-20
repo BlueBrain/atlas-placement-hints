@@ -63,6 +63,13 @@ def distances_to_mesh_wrt_dir(
 
     number_of_voxels = directions.shape[0]
     assert origins.shape[0] == number_of_voxels
+    """
+    for ray_pos, ray_dir in zip(origins, directions):
+        locs, rays, tris = mesh.ray.intersects_location([ray_pos], [ray_dir], multiple_hits=False)
+        dist = np.linalg.norm(ray_pos-locs, axis=1)
+        if dist>100:
+            print(dist, ray_pos, ray_dir)
+    """
     locations, ray_ids, triangle_ids = memory_efficient_intersection(
         intersector, origins, directions * sign
     )
@@ -210,7 +217,6 @@ def distances_from_voxels_to_meshes_wrt_dir(
     # dists is a list of 3D numpy arrays, one for each layer
     dists = np.full((len(layer_meshes),) + layers_volume.shape, np.nan)
     any_obtuse_intersection = np.zeros(layers_volume.shape, dtype=bool)
-
     invalid_direction_vectors_mask = np.logical_and(
         np.isnan(np.linalg.norm(directions, axis=-1)), (layers_volume > 0)
     )
