@@ -2,6 +2,7 @@
 Module containing free functions for the computation of
 distances to boundary meshes with respect to voxels direction vectors.
 """
+
 from __future__ import annotations
 
 import logging
@@ -25,31 +26,53 @@ logging.captureWarnings(True)
 L = logging.getLogger(__name__)
 
 
-def find_intersection(data, directions, mesh, step):
+def find_intersection(
+    data: Tuple[FloatArray, FloatArray],
+    directions: FloatArray,
+    mesh: "trimesh.Trimesh",
+    step: float,
+    max_counts: int = 10000,
+    max_voxel_angle: float = -0.5,
+):
     """Find intersection point between a curved ray and a mesh.
 
     The algorithm integrates along the vector fields `direction` until a point is outside,
     and returns the previous point.
+
+    We have two conditions to stop the integration early:
+        - the angle between two consecutive voxels is smaller than `max_voxel_angle`
+        - the maximum number of steps `max_counts` is reached
 
     Args:
         data: tuple ray position and direction
         directions: array of direction vectors
         mesh: mesh to find intersection
         step: step size of the integration
+        max_counts: maximum number of steps
+        max_voxel_angle: maximum angle between two subsequent voxels to stop the integration
     """
     ray_pos, ray_dir = data
     point = np.array(ray_pos, dtype=float)
+    previous_direction = directions.lookup(directions.indices_to_positions(point))
+
     count = 0
-    while count < 10000:
+    while count < max_counts:
         count += 1
-        next_point = point + step * directions.lookup(directions.indices_to_positions(point))
+        direction = directions.lookup(directions.indices_to_positions(point))
+        next_point = point + step * direction
+
+        if np.dot(previous_direction, direction) < max_voxel_angle:
+            L.warning("head on voxels with angle %s", np.dot(previous_direction, direction))
+            break
 
         if mesh.contains([next_point])[0]:
             point = next_point
+            previous_direction = direction
         else:
             break
-    if count > 10000:
-        L.warning("max count attained for %s, %s", ray_pos, ray_dir)
+
+    if count >= max_counts:
+        L.warning("max count attained for %s, %s, %s", ray_pos, ray_dir, count)
     return point
 
 

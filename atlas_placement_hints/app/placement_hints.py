@@ -467,7 +467,9 @@ def cerebellum(
     """
     set_verbose(L, verbose)
 
-    atlas = _create_layered_atlas(annotation_path, hierarchy_path, metadata_path, save_local_meshes)
+    atlas = _create_layered_atlas(
+        annotation_path, hierarchy_path, metadata_path, save_local_meshes=save_local_meshes
+    )
     _placement_hints(
         atlas,
         direction_vectors_path,
