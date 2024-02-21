@@ -6,16 +6,15 @@ from __future__ import annotations
 
 import logging
 import warnings
+from functools import partial
 from typing import Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import trimesh
 from atlas_commons.typing import BoolArray, FloatArray, NDArray
 from atlas_commons.utils import normalized, split_into_halves
+from joblib import Parallel, delayed
 from scipy.interpolate import LinearNDInterpolator, NearestNDInterpolator
-from joblib import Parallel
-from joblib import delayed
-from functools import partial
 
 from atlas_placement_hints.distances.utils import memory_efficient_intersection
 from atlas_placement_hints.exceptions import AtlasPlacementHintsError
@@ -32,9 +31,7 @@ def find_intersection(data, directions, mesh, step):
     count = 0
     while count < 10000:
         count += 1
-        next_point = (
-            point + step * directions.lookup(directions.indices_to_positions(point))
-        )
+        next_point = point + step * directions.lookup(directions.indices_to_positions(point))
 
         if mesh.contains([next_point])[0]:
             point = next_point
@@ -101,9 +98,11 @@ def distances_to_mesh_wrt_dir(
     if mode == "curved":
         f = partial(find_intersection, mesh=mesh, directions=directions, step=step * sign)
         L.info("Computing %s distances to mesh ...", len(origins))
-        locations = np.array(Parallel(n_jobs=n_jobs, verbose=5, batch_size=5000)(
-            delayed(f)(data) for data in zip(origins, _directions)
-        ))
+        locations = np.array(
+            Parallel(n_jobs=n_jobs, verbose=5, batch_size=5000)(
+                delayed(f)(data) for data in zip(origins, _directions)
+            )
+        )
 
     dist = np.full(number_of_voxels, np.nan)
     wrong_side = np.zeros(number_of_voxels, dtype=bool)

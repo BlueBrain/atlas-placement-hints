@@ -81,12 +81,12 @@ def compute_placement_hints(
         max_thicknesses=max_thicknesses,
         tolerance=tolerance,
     )
-    #interpolate_problematic_distances(
+    # interpolate_problematic_distances(
     #    distances_to_meshes,
     #    problematic_mask,
     #    atlas.volume,
     #    has_hemispheres=has_hemispheres,
-    #)
+    # )
     (interpolated_distances_report, filtered_problematic_mask,) = report_distance_problems(
         distances_to_meshes,
         atlas.volume,

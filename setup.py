@@ -19,7 +19,7 @@ setup(
         "atlas-commons>=0.1.4",
         "cached-property>=1.5.2",
         "click>=7.0",
-        #"cgal-pybind>=0.1.4",
+        # "cgal-pybind>=0.1.4",
         "networkx>=2.4",  # soft dep required for trimesh to allow 'repair'
         "numpy>=1.15.0",
         "rtree>=0.8.3",  # soft dep required for trimesh to allow indexing

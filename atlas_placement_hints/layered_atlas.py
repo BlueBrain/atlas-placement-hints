@@ -421,7 +421,6 @@ class VoxelBasedLayeredAtlas(AbstractLayeredAtlas):
 
 
 class CerebellumAtlas(MeshBasedLayeredAtlas):
-
     def __init__(
         self,
         annotation: "VoxelData",

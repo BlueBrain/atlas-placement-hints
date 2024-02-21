@@ -24,9 +24,9 @@ from atlas_placement_hints.compute_placement_hints import compute_placement_hint
 from atlas_placement_hints.exceptions import AtlasPlacementHintsError
 from atlas_placement_hints.layered_atlas import (
     AbstractLayeredAtlas,
+    CerebellumAtlas,
     MeshBasedLayeredAtlas,
     ThalamusAtlas,
-    CerebellumAtlas,
     VoxelBasedLayeredAtlas,
     save_problematic_voxel_mask,
 )
@@ -105,7 +105,7 @@ def _placement_hints(  # pylint: disable=too-many-locals
         )
     distances_info, problems = compute_placement_hints(
         atlas,
-        direction_vectors,#.raw,
+        direction_vectors,  # .raw,
         max_thicknesses,
         flip_direction_vectors=flip_direction_vectors,
         has_hemispheres=has_hemispheres,
