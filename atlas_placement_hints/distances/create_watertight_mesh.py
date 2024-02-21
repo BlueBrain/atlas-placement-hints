@@ -187,7 +187,7 @@ def create_watertight_trimesh(
     tempdir: Union[Path, str] = ""
     if mesh_name is not None:
         mesh_name = mesh_name.replace(" ", "_")
-        tempdir = Path("tmp") / f"mesh_{mesh_name}"
+        tempdir = Path("meshes") / f"mesh_{mesh_name}"
         tempdir.mkdir(parents=True, exist_ok=True)
     else:
         tempdir_ctx = tempfile.TemporaryDirectory()  # pylint: disable=consider-using-with

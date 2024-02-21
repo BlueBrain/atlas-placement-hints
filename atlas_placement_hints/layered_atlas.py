@@ -432,6 +432,7 @@ class CerebellumAtlas(MeshBasedLayeredAtlas):
         annotation: "VoxelData",
         region_map: "RegionMap",
         metadata: dict,
+        save_local_meshes: bool = False,
     ):
         """
         annotation: annotated volume enclosing the whole brain atlas.
@@ -440,6 +441,7 @@ class CerebellumAtlas(MeshBasedLayeredAtlas):
         """
 
         MeshBasedLayeredAtlas.__init__(self, annotation, region_map, metadata)
+        self.save_local_meshes = save_local_meshes
 
     def _compute_dists_and_obtuse_angles(self, volume, direction_vectors, hemisphere=None):
         n_layers = len(np.unique(volume))
@@ -468,7 +470,8 @@ class CerebellumAtlas(MeshBasedLayeredAtlas):
                 region_volume = volume.copy()
                 region_volume *= region_mask
                 layer_meshes = self.create_layer_meshes(
-                    region_volume, mesh_name=f"{region_name}_{hemisphere}"
+                    region_volume,
+                    mesh_name=f"{region_name}_{hemisphere}" if self.save_local_meshes else None,
                 )
                 # use use curved lines when computing distances
                 dists, obtuse = distances_from_voxels_to_meshes_wrt_dir(
