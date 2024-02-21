@@ -188,7 +188,7 @@ class MeshBasedLayeredAtlas(AbstractLayeredAtlas):
         )
         meshes = []
         for index in tqdm(layers_values):
-            mesh = create_watertight_trimesh(layered_volume >= index, layer_value=index)
+            mesh = create_watertight_trimesh(layered_volume >= index)
             meshes.append(mesh)
 
         L.info(
@@ -456,24 +456,28 @@ class CerebellumAtlas(MeshBasedLayeredAtlas):
                     region_name,
                 )
                 region_mask = query_region_mask(
-                    {'query': parent_id, 'attribute': 'id', 'with_descendants': True},
+                    {"query": parent_id, "attribute": "id", "with_descendants": True},
                     self.annotation.raw,
                     self.region_map,
                 )
                 region_volume = volume.copy()
                 region_volume *= region_mask
-                layer_meshes = self.create_layer_meshes(region_volume, mesh_name=f'{region_name}_{hemisphere}')
+                layer_meshes = self.create_layer_meshes(
+                    region_volume, mesh_name=f"{region_name}_{hemisphere}"
+                )
+                # use use curved lines when computing distances
                 dists, obtuse = distances_from_voxels_to_meshes_wrt_dir(
-                    region_volume, layer_meshes, direction_vectors
+                    region_volume, layer_meshes, direction_vectors, mode="curved"
                 )
 
-                distances_to_layer_meshes[..., region_mask] = dists[..., region_mask]
+                distances_to_layer_meshes[:, region_mask] = dists[:, region_mask]
                 obtuse_angles[region_mask] = obtuse[region_mask]
-                return distances_to_layer_meshes, obtuse_angles
 
         return distances_to_layer_meshes, obtuse_angles
 
-    def create_layer_meshes(self, layered_volume: NDArray[np.integer], mesh_name=None) -> List["trimesh.Trimesh"]:
+    def create_layer_meshes(
+        self, layered_volume: NDArray[np.integer], mesh_name=None
+    ) -> List["trimesh.Trimesh"]:
         """
         Create meshes representing the upper boundary of each layer
         in the laminar region volume, referred to as `layered_volume`.
@@ -503,7 +507,8 @@ class CerebellumAtlas(MeshBasedLayeredAtlas):
         )
         meshes = []
         for index in tqdm(layers_values):
-            mesh = create_watertight_trimesh(layered_volume >= index, mesh_name=mesh_name+f'_{index}' if mesh_name is not None else None)
+            _mesh_name = mesh_name + f"_{index}" if mesh_name is not None else None
+            mesh = create_watertight_trimesh(layered_volume >= index, mesh_name=_mesh_name)
             meshes.append(mesh)
 
         full_mesh_bottom = meshes[0].copy()

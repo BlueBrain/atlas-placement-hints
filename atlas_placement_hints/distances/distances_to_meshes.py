@@ -13,6 +13,9 @@ import trimesh
 from atlas_commons.typing import BoolArray, FloatArray, NDArray
 from atlas_commons.utils import normalized, split_into_halves
 from scipy.interpolate import LinearNDInterpolator, NearestNDInterpolator
+from joblib import Parallel
+from joblib import delayed
+from functools import partial
 
 from atlas_placement_hints.distances.utils import memory_efficient_intersection
 from atlas_placement_hints.exceptions import AtlasPlacementHintsError
@@ -23,11 +26,33 @@ logging.captureWarnings(True)
 L = logging.getLogger(__name__)
 
 
+def find_intersection(data, directions, mesh, step):
+    ray_pos, ray_dir = data
+    point = np.array(ray_pos, dtype=float)
+    count = 0
+    while count < 10000:
+        count += 1
+        next_point = (
+            point + step * directions.lookup(directions.indices_to_positions(point))
+        )
+
+        if mesh.contains([next_point])[0]:
+            point = next_point
+        else:
+            break
+    if count > 10000:
+        print(f"max count attained for {ray_pos}, {ray_dir}")
+    return point
+
+
 def distances_to_mesh_wrt_dir(
     mesh: "trimesh.Trimesh",
-    origins: FloatArray,
+    origins,
     directions: FloatArray,
     backward: bool = False,
+    mode: str = "straight",
+    step: float = 1.0,
+    n_jobs: int = 40,
 ) -> Tuple[FloatArray, BoolArray]:
     """
     Compute the distances from `origins` to the input mesh along `directions`.
@@ -46,6 +71,9 @@ def distances_to_mesh_wrt_dir(
                   still uses unnegated directions.
                   This option is intended to be used to check the locations
                   of deeper distances (e.g. L5, L6 for L4 voxels)
+        mode: "straight" or "curved" to follow vector field
+        step: step size to use when computing curved lines
+        n_jobs: number of parallel jobs to use when computing curved lines
 
     Returns:
         float array(N, ) array holding the distance of each voxel
@@ -55,30 +83,36 @@ def distances_to_mesh_wrt_dir(
                          False otherwise.
     """
     sign = -1 if backward else 1
+    _directions = directions.raw[origins] if mode == "curved" else directions
+    origins = np.transpose(origins) if mode == "curved" else origins
 
-    # If available, embree provides a significant speedup
-    ray = trimesh.ray.ray_pyembree if trimesh.ray.has_embree else trimesh.ray.ray_triangle
+    ray_ids = np.array(range(len(origins)))
+    number_of_voxels = _directions.shape[0]
+    if mode == "straight":
+        # If available, embree provides a significant speedup
+        ray = trimesh.ray.ray_pyembree if trimesh.ray.has_embree else trimesh.ray.ray_triangle
 
-    intersector = ray.RayMeshIntersector(mesh)
+        intersector = ray.RayMeshIntersector(mesh)
+        assert origins.shape[0] == number_of_voxels
+        locations, ray_ids, triangle_ids = memory_efficient_intersection(
+            intersector, origins, directions * sign
+        )
 
-    number_of_voxels = directions.shape[0]
-    assert origins.shape[0] == number_of_voxels
-    """
-    for ray_pos, ray_dir in zip(origins, directions):
-        locs, rays, tris = mesh.ray.intersects_location([ray_pos], [ray_dir], multiple_hits=False)
-        dist = np.linalg.norm(ray_pos-locs, axis=1)
-        if dist>100:
-            print(dist, ray_pos, ray_dir)
-    """
-    locations, ray_ids, triangle_ids = memory_efficient_intersection(
-        intersector, origins, directions * sign
-    )
+    if mode == "curved":
+        f = partial(find_intersection, mesh=mesh, directions=directions, step=step * sign)
+        L.info("Computing %s distances to mesh ...", len(origins))
+        locations = np.array(Parallel(n_jobs=n_jobs, verbose=5, batch_size=5000)(
+            delayed(f)(data) for data in zip(origins, _directions)
+        ))
+
     dist = np.full(number_of_voxels, np.nan)
     wrong_side = np.zeros(number_of_voxels, dtype=bool)
-
     if locations.shape[0] > 0:  # Non empty intersections
         dist[ray_ids] = sign * np.linalg.norm(locations - origins[ray_ids], axis=1)
-        wrong_side[ray_ids] = is_obtuse_angle(directions[ray_ids], mesh.face_normals[triangle_ids])
+        if mode == "straight":
+            wrong_side[ray_ids] = is_obtuse_angle(
+                _directions[ray_ids], mesh.face_normals[triangle_ids]
+            )
         # pylint: disable=logging-unsupported-format, consider-using-f-string
         L.info(
             "Proportion of intersecting rays: {:.3%}".format(ray_ids.shape[0] / number_of_voxels)
@@ -124,7 +158,7 @@ def _split_indices_along_layer(
 
 # pylint: disable=too-many-arguments
 def _compute_distances_to_mesh(
-    directions: FloatArray,
+    directions,
     dists: FloatArray,
     any_obtuse_intersection: BoolArray,
     voxel_indices: List[NDArray[np.integer]],
@@ -132,6 +166,7 @@ def _compute_distances_to_mesh(
     index: int,
     backward: bool = False,
     rollback_distance: int = 4,
+    mode: str = "straight",
 ) -> None:
     """
     Compute distances from voxels to `mesh` along direction vectors.
@@ -161,19 +196,25 @@ def _compute_distances_to_mesh(
             voxelized layers it represents. This offset for the ray origins allows to obtain
             more valid intersections for voxels close to the mesh. The default value 4 was found
             by trials and errors.
+        mode: whether to use straight or curved rays for distance computation.
     """
     if len(voxel_indices[0]) == 0:
         return
 
     # Adjusted ray origin: voxel position  -  an added buffer along direction
     sign = -1 if backward else 1
-    origins = np.transpose(voxel_indices) + 0.5 - directions * (sign * rollback_distance)
+
+    if mode == "straight":
+        origins = np.transpose(voxel_indices) + 0.5 - directions * (sign * rollback_distance)
+    if mode == "curved":
+        origins = voxel_indices
+
     L.info(
         "Computing distances for the %s mesh with index %d ...",
         "lower" if backward is False else "upper",
         index,
     )
-    dist, wrong = distances_to_mesh_wrt_dir(mesh, origins, directions, backward=backward)
+    dist, wrong = distances_to_mesh_wrt_dir(mesh, origins, directions, backward=backward, mode=mode)
     dist -= sign * rollback_distance
     with np.errstate(invalid="ignore"):
         dist[(dist * sign) < 0] = 0
@@ -189,6 +230,8 @@ def distances_from_voxels_to_meshes_wrt_dir(
     layers_volume: NDArray[np.integer],
     layer_meshes: List[trimesh.Trimesh],
     directions: FloatArray,
+    rollback_distance: int = 4,
+    mode: str = "straight",
 ) -> Tuple[FloatArray, BoolArray]:
     """
     For each voxel of the layers volume, compute the distance to each layer mesh along the
@@ -212,13 +255,13 @@ def distances_from_voxels_to_meshes_wrt_dir(
         any_obtuse_intersection: mask of voxels where the intersection with
             a mesh resulted in an obtuse angle between the face and the direction vector.
     """
-    directions = normalized(directions)
+    _directions = normalized(directions.raw)
 
     # dists is a list of 3D numpy arrays, one for each layer
     dists = np.full((len(layer_meshes),) + layers_volume.shape, np.nan)
     any_obtuse_intersection = np.zeros(layers_volume.shape, dtype=bool)
     invalid_direction_vectors_mask = np.logical_and(
-        np.isnan(np.linalg.norm(directions, axis=-1)), (layers_volume > 0)
+        np.isnan(np.linalg.norm(_directions, axis=-1)), (layers_volume > 0)
     )
     if np.any(invalid_direction_vectors_mask):
         proportion = float(np.mean(invalid_direction_vectors_mask[layers_volume > 0]))
@@ -235,13 +278,15 @@ def distances_from_voxels_to_meshes_wrt_dir(
         )
         for part, backward in [(below_indices, False), (above_indices, True)]:
             _compute_distances_to_mesh(
-                directions[part],
+                _directions[part] if mode == "straight" else directions,
                 dists[mesh_index],
                 any_obtuse_intersection,
                 part,
                 mesh,
                 mesh_index,
                 backward=backward,
+                rollback_distance=rollback_distance,
+                mode=mode,
             )
 
     return dists, any_obtuse_intersection

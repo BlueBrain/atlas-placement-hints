@@ -105,7 +105,7 @@ def _placement_hints(  # pylint: disable=too-many-locals
         )
     distances_info, problems = compute_placement_hints(
         atlas,
-        direction_vectors.raw,
+        direction_vectors,#.raw,
         max_thicknesses,
         flip_direction_vectors=flip_direction_vectors,
         has_hemispheres=has_hemispheres,
