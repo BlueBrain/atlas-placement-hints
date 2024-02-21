@@ -27,6 +27,7 @@ setup(
         "tqdm>=4.44.1",
         "trimesh>=2.38.10",
         "voxcell>=3.0.0",
+        "joblib>=1.3.0",
     ],
     extras_require={
         "tests": [

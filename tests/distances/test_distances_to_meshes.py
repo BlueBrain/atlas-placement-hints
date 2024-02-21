@@ -7,6 +7,11 @@ import atlas_placement_hints.distances.distances_to_meshes as tested
 from atlas_placement_hints.exceptions import AtlasPlacementHintsError
 
 
+class _Vector:
+    def __init__(self, raw):
+        self.raw = raw
+
+
 class Test_distances_to_mesh_wrt_dir:
     def test_one_tri_boundary(self):
         one_mesh = trimesh.Trimesh(
@@ -151,14 +156,16 @@ class Test_distances_from_voxels_to_meshes_wrt_dir:
         )
         nanvec = [np.nan, np.nan, np.nan]
         upvec = [0, 1, 0]
-        principal_axes = np.array(
-            [
+        principal_axes = _Vector(
+            np.array(
                 [
-                    [nanvec, nanvec, nanvec, nanvec],
-                    [upvec, upvec, upvec, upvec],
-                    [nanvec, nanvec, nanvec, nanvec],
+                    [
+                        [nanvec, nanvec, nanvec, nanvec],
+                        [upvec, upvec, upvec, upvec],
+                        [nanvec, nanvec, nanvec, nanvec],
+                    ]
                 ]
-            ]
+            )
         )
 
         distances, wrong_side = tested.distances_from_voxels_to_meshes_wrt_dir(
@@ -208,18 +215,20 @@ class Test_distances_from_voxels_to_meshes_wrt_dir:
         )
         nanvec = [np.nan, np.nan, np.nan]
         upvec = [0, 1, 0]
-        principal_axes = np.array(
-            [
+        principal_axes = _Vector(
+            np.array(
                 [
-                    [nanvec, nanvec, nanvec, nanvec],
-                    [upvec, upvec, upvec, upvec],
-                    [nanvec, nanvec, nanvec, nanvec],
+                    [
+                        [nanvec, nanvec, nanvec, nanvec],
+                        [upvec, upvec, upvec, upvec],
+                        [nanvec, nanvec, nanvec, nanvec],
+                    ]
                 ]
-            ]
+            )
         )
 
         with pyt.warns(UserWarning, match="NaN direction vectors"):
-            principal_axes[0, 1, 0] = nanvec
+            principal_axes.raw[0, 1, 0] = nanvec
             tested.distances_from_voxels_to_meshes_wrt_dir(
                 test_layered_volume, [top_mesh, bot_mesh], principal_axes
             )
@@ -286,16 +295,19 @@ class Test_distances_from_voxels_to_meshes_wrt_dir:
         up = [0, -1, 0]
         dup = [0, -np.sqrt(0.5), -np.sqrt(0.5)]
         nanvec = [np.nan, np.nan, np.nan]
-        vectors = np.array(
-            [
+
+        vectors = _Vector(
+            np.array(
                 [
-                    [nanvec, nanvec, nanvec, nanvec, nanvec],
-                    [nanvec, nanvec, dup, up, up],
-                    [nanvec, dup, dup, nanvec, nanvec],
-                    [nanvec, dup, up, up, nanvec],
-                    [nanvec, nanvec, nanvec, nanvec, nanvec],
+                    [
+                        [nanvec, nanvec, nanvec, nanvec, nanvec],
+                        [nanvec, nanvec, dup, up, up],
+                        [nanvec, dup, dup, nanvec, nanvec],
+                        [nanvec, dup, up, up, nanvec],
+                        [nanvec, nanvec, nanvec, nanvec, nanvec],
+                    ]
                 ]
-            ]
+            )
         )
 
         distances, something_wrong = tested.distances_from_voxels_to_meshes_wrt_dir(

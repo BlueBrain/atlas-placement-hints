@@ -10,6 +10,7 @@ import subprocess
 import tempfile
 from pathlib import Path
 from shutil import which
+from typing import Union
 
 import nrrd  # type: ignore
 import numpy as np
@@ -183,12 +184,14 @@ def create_watertight_trimesh(
         optimized_mesh: the optimized triangle mesh produced by ultraVolume2Mesh
          (Dual Marching Cubes algorithm).
     """
+    tempdir: Union[Path, str] = ""
     if mesh_name is not None:
         mesh_name = mesh_name.replace(" ", "_")
         tempdir = Path("tmp") / f"mesh_{mesh_name}"
         tempdir.mkdir(parents=True, exist_ok=True)
     else:
-        tempdir = tempfile.TemporaryDirectory()
+        tempdir_ctx = tempfile.TemporaryDirectory()  # pylint: disable=consider-using-with
+        tempdir = tempdir_ctx.name
 
     # The format of the following filepaths is imposed by Ultraliser.
     volume_path = str(Path(tempdir, "binary_image"))
@@ -214,7 +217,7 @@ def create_watertight_trimesh(
     optimized_mesh = trimesh.load_mesh(output_filepath_opt)
 
     if mesh_name is None:
-        tempdir.cleanup()
+        tempdir_ctx.cleanup()
 
     if optimization_info:
         unoptimized_mesh = trimesh.load_mesh(output_filepath_unopt)

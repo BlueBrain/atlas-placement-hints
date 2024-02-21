@@ -214,7 +214,9 @@ class MeshBasedLayeredAtlas(AbstractLayeredAtlas):
 
         return meshes
 
-    def _compute_dists_and_obtuse_angles(self, volume, direction_vectors, hemisphere=None):
+    def _compute_dists_and_obtuse_angles(
+        self, volume, direction_vectors, hemisphere=None
+    ):  # pylint: disable=unused-argument
         layer_meshes = self.create_layer_meshes(volume)
         # pylint: disable=fixme
         # TODO: compute max_smooth_error and use it as the value of rollback_distance
@@ -421,6 +423,10 @@ class VoxelBasedLayeredAtlas(AbstractLayeredAtlas):
 
 
 class CerebellumAtlas(MeshBasedLayeredAtlas):
+    """
+    Class holding the data of a two-layer atlas for the mouse cerebellum.
+    """
+
     def __init__(
         self,
         annotation: "VoxelData",

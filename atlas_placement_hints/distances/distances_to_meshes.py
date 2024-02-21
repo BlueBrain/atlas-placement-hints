@@ -26,6 +26,17 @@ L = logging.getLogger(__name__)
 
 
 def find_intersection(data, directions, mesh, step):
+    """Find intersection point between a curved ray and a mesh.
+
+    The algorithm integrates along the vector fields `direction` until a point is outside,
+    and returns the previous point.
+
+    Args:
+        data: tuple ray position and direction
+        directions: array of direction vectors
+        mesh: mesh to find intersection
+        step: step size of the integration
+    """
     ray_pos, ray_dir = data
     point = np.array(ray_pos, dtype=float)
     count = 0
@@ -38,7 +49,7 @@ def find_intersection(data, directions, mesh, step):
         else:
             break
     if count > 10000:
-        print(f"max count attained for {ray_pos}, {ray_dir}")
+        L.warning("max count attained for %s, %s", ray_pos, ray_dir)
     return point
 
 
@@ -98,11 +109,8 @@ def distances_to_mesh_wrt_dir(
     if mode == "curved":
         f = partial(find_intersection, mesh=mesh, directions=directions, step=step * sign)
         L.info("Computing %s distances to mesh ...", len(origins))
-        locations = np.array(
-            Parallel(n_jobs=n_jobs, verbose=5, batch_size=5000)(
-                delayed(f)(data) for data in zip(origins, _directions)
-            )
-        )
+        with Parallel(n_jobs=n_jobs, verbose=5, batch_size=5000) as parallel:
+            locations = np.array(parallel(delayed(f)(data) for data in zip(origins, _directions)))
 
     dist = np.full(number_of_voxels, np.nan)
     wrong_side = np.zeros(number_of_voxels, dtype=bool)

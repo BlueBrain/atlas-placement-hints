@@ -14,6 +14,9 @@ ignore-docstrings=yes
 # Ignore imports when computing similarities.
 ignore-imports=no
 
+# Maximum number of locals for function / method body
+max-locals=20
+
 [DESIGN]
 # Maximum number of arguments for function / method
 max-args=7
