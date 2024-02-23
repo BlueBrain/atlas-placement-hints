@@ -10,6 +10,7 @@ from __future__ import annotations
 import logging
 import os
 from abc import ABC, abstractmethod
+from copy import deepcopy
 from enum import IntEnum
 from typing import TYPE_CHECKING, Dict, List, Union
 
@@ -469,13 +470,15 @@ class CerebellumAtlas(MeshBasedLayeredAtlas):
                 )
                 region_volume = volume.copy()
                 region_volume *= region_mask
+                region_direction_vectors = deepcopy(direction_vectors)
+                region_direction_vectors.raw[~region_mask] = [0, 0, 0]
                 layer_meshes = self.create_layer_meshes(
                     region_volume,
                     mesh_name=f"{region_name}_{hemisphere}" if self.save_local_meshes else None,
                 )
                 # use use curved lines when computing distances
                 dists, obtuse = distances_from_voxels_to_meshes_wrt_dir(
-                    region_volume, layer_meshes, direction_vectors, mode="curved"
+                    region_volume, layer_meshes, region_direction_vectors, mode="curved"
                 )
 
                 distances_to_layer_meshes[:, region_mask] = dists[:, region_mask]
@@ -516,7 +519,9 @@ class CerebellumAtlas(MeshBasedLayeredAtlas):
         meshes = []
         for index in tqdm(layers_values):
             _mesh_name = mesh_name + f"_{index}" if mesh_name is not None else None
-            mesh = create_watertight_trimesh(layered_volume >= index, mesh_name=_mesh_name)
+            mesh = create_watertight_trimesh(
+                layered_volume >= index, mesh_name=_mesh_name, mode="trimesh"
+            )
             meshes.append(mesh)
 
         full_mesh_bottom = meshes[0].copy()

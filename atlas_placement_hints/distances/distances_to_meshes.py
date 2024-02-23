@@ -30,49 +30,53 @@ def find_intersection(
     data: Tuple[FloatArray, FloatArray],
     directions: FloatArray,
     mesh: "trimesh.Trimesh",
-    step: float,
+    sign: float,
+    step: float = 1.0,
     max_counts: int = 10000,
-    max_voxel_angle: float = -0.5,
 ):
     """Find intersection point between a curved ray and a mesh.
 
     The algorithm integrates along the vector fields `direction` until a point is outside,
     and returns the previous point.
 
-    We have two conditions to stop the integration early:
-        - the angle between two consecutive voxels is smaller than `max_voxel_angle`
-        - the maximum number of steps `max_counts` is reached
-
     Args:
         data: tuple ray position and direction
         directions: array of direction vectors
         mesh: mesh to find intersection
+        sign: sign of the direction
         step: step size of the integration
         max_counts: maximum number of steps
-        max_voxel_angle: maximum angle between two subsequent voxels to stop the integration
     """
     ray_pos, ray_dir = data
     point = np.array(ray_pos, dtype=float)
-    previous_direction = directions.lookup(directions.indices_to_positions(point))
+    inside = mesh.contains([point])[0]
 
+    direction = sign * directions.lookup(directions.indices_to_positions(point))
     count = 0
     while count < max_counts:
         count += 1
-        direction = directions.lookup(directions.indices_to_positions(point))
+
         next_point = point + step * direction
+        next_direction = sign * directions.lookup(directions.indices_to_positions(next_point))
 
-        if np.dot(previous_direction, direction) < max_voxel_angle:
-            L.warning("head on voxels with angle %s", np.dot(previous_direction, direction))
-            break
+        # if we are outside the mesh or the region we stop
+        if inside:
+            if mesh.contains([next_point])[0] and all(next_direction):
+                point = next_point
+                direction = next_direction
+            else:
+                break
 
-        if mesh.contains([next_point])[0]:
-            point = next_point
-            previous_direction = direction
-        else:
-            break
+        if not inside:
+            if not mesh.contains([next_point])[0] and all(next_direction):
+                point = next_point
+                direction = next_direction
+            else:
+                break
 
     if count >= max_counts:
         L.warning("max count attained for %s, %s, %s", ray_pos, ray_dir, count)
+
     return point
 
 
@@ -117,7 +121,6 @@ def distances_to_mesh_wrt_dir(
     _directions = directions.raw[origins] if mode == "curved" else directions
     origins = np.transpose(origins) if mode == "curved" else origins
 
-    ray_ids = np.array(range(len(origins)))
     number_of_voxels = _directions.shape[0]
     if mode == "straight":
         # If available, embree provides a significant speedup
@@ -130,10 +133,13 @@ def distances_to_mesh_wrt_dir(
         )
 
     if mode == "curved":
-        f = partial(find_intersection, mesh=mesh, directions=directions, step=step * sign)
+        f = partial(find_intersection, mesh=mesh, directions=directions, sign=sign, step=step)
         L.info("Computing %s distances to mesh ...", len(origins))
         with Parallel(n_jobs=n_jobs, verbose=5, batch_size=5000) as parallel:
-            locations = np.array(parallel(delayed(f)(data) for data in zip(origins, _directions)))
+            locations = parallel(delayed(f)(data) for data in zip(origins, _directions))
+
+        ray_ids = np.array([i for i, loc in enumerate(locations) if loc is not None])
+        locations = np.array([loc for loc in locations if loc is not None])
 
     dist = np.full(number_of_voxels, np.nan)
     wrong_side = np.zeros(number_of_voxels, dtype=bool)
@@ -245,7 +251,10 @@ def _compute_distances_to_mesh(
         index,
     )
     dist, wrong = distances_to_mesh_wrt_dir(mesh, origins, directions, backward=backward, mode=mode)
-    dist -= sign * rollback_distance
+
+    if mode == "straight":
+        dist -= sign * rollback_distance
+
     with np.errstate(invalid="ignore"):
         dist[(dist * sign) < 0] = 0
 

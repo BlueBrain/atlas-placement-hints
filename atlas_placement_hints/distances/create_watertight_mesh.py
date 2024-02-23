@@ -4,6 +4,7 @@ and its utilities.
 Generating optimized meshes requires Ultraliser,
 see https://bbpcode.epfl.ch/browse/code/viz/Ultraliser
 """
+
 import logging
 import os
 import subprocess
@@ -169,7 +170,10 @@ def log_mesh_optimization_info(
 
 
 def create_watertight_trimesh(
-    binary_image: BoolArray, optimization_info: bool = False, mesh_name=None
+    binary_image: BoolArray,
+    optimization_info: bool = False,
+    mesh_name: Union[str, None] = None,
+    mode: str = "ultralizer",
 ) -> trimesh.base.Trimesh:
     """
     Create a watertight triangle mesh out of a 3D binary image.
@@ -180,6 +184,9 @@ def create_watertight_trimesh(
         binary_image: 3D image to be processed for the creation of its boundary mesh.
         optimization_info: if True, compute and display optimization info.
             Otherwise no optimization info is computed.
+        mesh_name: name of the mesh to save, if None, tmpdir is used.
+        mode: either 'ultralizer' or 'trimesh', trimesh will apply a simple marching cube algo
+
     Returns:
         optimized_mesh: the optimized triangle mesh produced by ultraVolume2Mesh
          (Dual Marching Cubes algorithm).
@@ -201,14 +208,20 @@ def create_watertight_trimesh(
     )
     output_filepath_unopt = _volume_path.parent / "meshes" / (str(_volume_path.stem) + "-dmc.obj")
     if not output_filepath_opt.exists():
-        # ultraVolume2Mesh requires a name without file extension.
-        # Write image to disk for later use by ultraliser.
-        _write_numpy_array_to_img_file(binary_image, volume_path)
-        ultra_volume_2_mesh(
-            volume_path=volume_path + ".hdr",
-            output_directory=str(tempdir),
-            optimization_iterations=5,
-        )
+        if mode == "trimesh":
+            mesh = trimesh.voxel.VoxelGrid(binary_image).marching_cubes
+            Path(output_filepath_opt).parent.mkdir(parents=True, exist_ok=True)
+            mesh.export(output_filepath_opt)
+
+        if mode == "ultralizer":
+            # ultraVolume2Mesh requires a name without file extension.
+            # Write image to disk for later use by ultraliser.
+            _write_numpy_array_to_img_file(binary_image, volume_path)
+            ultra_volume_2_mesh(
+                volume_path=volume_path + ".hdr",
+                output_directory=str(tempdir),
+                optimization_iterations=5,
+            )
 
     for filepath in [output_filepath_unopt, output_filepath_opt]:
         if not Path(filepath).exists():
