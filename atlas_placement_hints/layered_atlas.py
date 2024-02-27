@@ -330,22 +330,46 @@ class ThalamusAtlas(MeshBasedLayeredAtlas):
         exit.
 
     2. MANUALLY cut the reticular meshes into the 'top' and 'bottom' halves (aka the inner and outer
-        halves if looking outwards from the center of the thalamus) using something like Blender. Do
-        this for each hemisphere. The RT region 'top' and 'bottom' halves are curvy and complex
-        enough that it was decided that manual cutting was the most effective / efficient way to get
-        a good mesh layer for the thalamus placement-hints, since the previous computational way
-        included too many holes due to the curviness. To do the cutting in Blender, see the project
-        mentioned above for an example. What you want is to import each reticular mesh, select 'Edit
-        Mode' in the upper left corner, select either the 'inner' (bottom) or 'outer' (top) half of
-        that hemisphere's reticular mesh, then click 'Mesh > Separate > Selection' (hotkey capital
-        P), then 'File > Export' into its own file, making sure to click the box that says
-        'Selection Only' in the export prompt. Note that this is a different operation than
-        'splitting'. There are many tutorials on Youtube for how to do this. In the outgoing
-        filename, change 'original' to 'handcut'; you should end up with four new files:
+        halves if looking outwards from the center of the thalamus) using software like
+        'Blender'. Do this for each hemisphere. The RT region 'top' and 'bottom' halves are curvy
+        and complex enough that it was decided that manual cutting was the most effective /
+        efficient way to get a good mesh layer for the thalamus placement-hints, since the previous
+        computational way included too many holes due to the curviness. To do the cutting in
+        Blender, you can follow these instructions:
+
+        A. Import each reticular mesh ('File > Import > Stl (.stl)').
+        B. Click the dropdown menu in the upper left corner that says 'Object Mode' and change it to
+        'Edit Mode'.
+        C. In the central window where the meshes are displayed, (you may have to zoom out) select
+        either the 'inner' (bottom) or 'outer' (top) half of that hemisphere's reticular mesh.
+        D. Click 'Mesh > Separate > Selection' (or press hotkey P then click Selection).
+        E. In the 'Scene Collection' window to the top right, which lists all the meshes, you should
+        now see a new entry that is named similarly to
+        'reticular_nucleus_mesh_right_hemisphere_original.001', depending on your input file. Click
+        on its entry in the 'Scene Collection' window to select it.
+        F. Select 'File > Export > Stl (.stl)' to export this new mesh into its own file, making
+        sure to click the box that says 'Selection Only' in the export prompt. Name the file
+        appropriate to the hemisphere and top/bottom selection that you've just done. If you're
+        unsure which mesh you have selected, you can click the 'Eye' symbols in the 'Scene
+        Collection' window to toggle which meshes are shown in the main view.
+        G. Since you have 'separated' your mesh into two, the original mesh object now consists of
+        the remainder of the mesh which you did not select in the previous steps. In other words, if
+        you previously selected, 'separated', and exported the 'bottom' of
+        'reticular_nucleus_mesh_right_hemisphere_original', the entry in 'Scene Collection' for the
+        mesh 'reticular_nucleus_mesh_right_hemisphere_original' now only consists of the 'top' part
+        of the mesh. Click the entry for it in 'Scene Collection', then 'File > Export' like above,
+        making sure to select 'Selection Only' and name it appropriately.
+        H. Repeat the process for the other hemisphere.
+
+        Note that this 'separation' is a different operation than 'splitting'. There are many tutorials on
+        Youtube for how to do this. In the outgoing filename, change 'original' to 'handcut'. In the
+        end, you should end up with four new files:
         'reticular_nucleus_mesh_left_hemisphere_bottom_handcut.stl',
         'reticular_nucleus_mesh_left_hemisphere_top_handcut.stl',
         'reticular_nucleus_mesh_right_hemisphere_bottom_handcut.stl', and
         'reticular_nucleus_mesh_right_hemisphere_top_handcut.stl'.
+        After you have made the 4 new files, I recommend you view them individually (using software
+        like Paraview) to double check that you named them correctly, etc.
 
     3. Re-run the top-level command 'atlas-placement-hints thalamus' but this time with both the
         argument '--thalamus-meshes-dir /your/folder/here' and the flag
