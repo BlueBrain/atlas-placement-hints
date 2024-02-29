@@ -32,7 +32,7 @@ def find_intersection(
     mesh: "trimesh.Trimesh",
     sign: float,
     step: float = 1.0,
-    max_counts: int = 10000,
+    max_counts: int = 500,
 ):
     """Find intersection point between a curved ray and a mesh.
 
