@@ -4,11 +4,13 @@ voxel-to-layer distances wrt to direction vectors in a laminar brain region.
 This module is used for the computation of placement hints in the mouse
 isocortex and in the mouse Hippocampus CA1 region.
 """
+
 from __future__ import annotations
 
 import logging
 import os
 from abc import ABC, abstractmethod
+from copy import deepcopy
 from enum import IntEnum
 from typing import TYPE_CHECKING, Dict, List, Union
 
@@ -213,7 +215,9 @@ class MeshBasedLayeredAtlas(AbstractLayeredAtlas):
 
         return meshes
 
-    def _compute_dists_and_obtuse_angles(self, volume, direction_vectors):
+    def _compute_dists_and_obtuse_angles(
+        self, volume, direction_vectors, hemisphere=None
+    ):  # pylint: disable=unused-argument
         layer_meshes = self.create_layer_meshes(volume)
         # pylint: disable=fixme
         # TODO: compute max_smooth_error and use it as the value of rollback_distance
@@ -237,7 +241,7 @@ class MeshBasedLayeredAtlas(AbstractLayeredAtlas):
                 self.metadata["region"]["name"],
             )
             dists_to_layer_meshes, obtuse = self._compute_dists_and_obtuse_angles(
-                hemisphere_volumes[hemisphere], direction_vectors
+                hemisphere_volumes[hemisphere], direction_vectors, hemisphere=hemisphere
             )
             hemisphere_distances.append(dists_to_layer_meshes)
             hemisphere_obtuse_angles.append(obtuse)
@@ -417,6 +421,114 @@ class VoxelBasedLayeredAtlas(AbstractLayeredAtlas):
         ), f"Expected {layer_count + 1} distance arrays, got {len(distances)} arrays."
 
         return {"distances_to_layer_boundaries": distances}
+
+
+class CerebellumAtlas(MeshBasedLayeredAtlas):
+    """
+    Class holding the data of a two-layer atlas for the mouse cerebellum.
+    """
+
+    def __init__(
+        self,
+        annotation: "VoxelData",
+        region_map: "RegionMap",
+        metadata: dict,
+        save_local_meshes: bool = False,
+    ):
+        """
+        annotation: annotated volume enclosing the whole brain atlas.
+        region_map: Object to navigate the brain regions hierarchy.
+        metadata: dict, see json examples in app/data/metadata
+        """
+
+        MeshBasedLayeredAtlas.__init__(self, annotation, region_map, metadata)
+        self.save_local_meshes = save_local_meshes
+
+    def _compute_dists_and_obtuse_angles(self, volume, direction_vectors, hemisphere=None):
+        n_layers = len(np.unique(volume))
+        distances_to_layer_meshes = np.zeros(
+            [n_layers] + list(self.annotation.shape), dtype=np.float32
+        )
+        obtuse_angles = np.zeros(self.annotation.shape, dtype=bool)
+
+        subregion_ids = []
+        for subregion_id in self.region_map.find(
+            "Cerebellar cortex", "name", with_descendants=True
+        ):
+            parent_id = self.region_map.get(subregion_id, "parent_structure_id")
+            if subregion_id in self.annotation.raw and parent_id not in subregion_ids:
+                subregion_ids.append(parent_id)
+                region_name = self.region_map.get(parent_id, "name")
+                L.info(
+                    "Computing placement hints for region %s.",
+                    region_name,
+                )
+                region_mask = query_region_mask(
+                    {"query": parent_id, "attribute": "id", "with_descendants": True},
+                    self.annotation.raw,
+                    self.region_map,
+                )
+                region_volume = volume.copy()
+                region_volume *= region_mask
+                region_direction_vectors = deepcopy(direction_vectors)
+                region_direction_vectors.raw[~region_mask] = [0, 0, 0]
+                layer_meshes = self.create_layer_meshes(
+                    region_volume,
+                    mesh_name=f"{region_name}_{hemisphere}" if self.save_local_meshes else None,
+                )
+                # use use curved lines when computing distances
+                dists, obtuse = distances_from_voxels_to_meshes_wrt_dir(
+                    region_volume, layer_meshes, region_direction_vectors, mode="curved"
+                )
+
+                distances_to_layer_meshes[:, region_mask] = dists[:, region_mask]
+                obtuse_angles[region_mask] = obtuse[region_mask]
+
+        return distances_to_layer_meshes, obtuse_angles
+
+    def create_layer_meshes(
+        self, layered_volume: NDArray[np.integer], mesh_name=None
+    ) -> List["trimesh.Trimesh"]:
+        """
+        Create meshes representing the upper boundary of each layer
+        in the laminar region volume, referred to as `layered_volume`.
+
+        Args:
+            layered_volume: numpy 3D array whose voxels are labelled by the indices of
+            `self.metadata["layers"]["names"]` augmented by 1.
+        Returns:
+            meshes: list of the layers meshes, together with the mesh of the complement of the
+                whole region. Each mesh is used to define the upper boundary of the
+                corresponding layer. Meshes from the first to the last layer have decreasing sizes:
+                the first mesh encloses all layers, the second mesh encloses all layers but the
+                first one, the second mesh encloses all layers but the first two, and so on so
+                forth. The last mesh represents the bottom of the last layer. It has the vertices
+                of the first mesh, but its normal are inverted.
+        """
+        layers_values = np.unique(layered_volume)
+        layers_values = layers_values[layers_values > 0]
+        layer_str_count = len(self.metadata["layers"]["names"])
+        assert len(layers_values) == len(
+            self.metadata["layers"]["names"]
+        ), f"{len(layers_values)} layer indices, {layer_str_count} layer strings"
+        L.info(
+            "Creating a watertight mesh for each of the %d layers of %s ...",
+            len(layers_values),
+            self.metadata["region"]["name"],
+        )
+        meshes = []
+        for index in tqdm(layers_values):
+            _mesh_name = mesh_name + f"_{index}" if mesh_name is not None else None
+            mesh = create_watertight_trimesh(
+                layered_volume >= index, mesh_name=_mesh_name, mode="trimesh"
+            )
+            meshes.append(mesh)
+
+        full_mesh_bottom = meshes[0].copy()
+        # Inverting normals as we select the complement of the layered atlas
+        full_mesh_bottom.invert()
+        meshes.append(full_mesh_bottom)
+        return meshes
 
 
 def save_problematic_voxel_mask(

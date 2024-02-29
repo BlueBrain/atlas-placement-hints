@@ -24,6 +24,7 @@ from atlas_placement_hints.compute_placement_hints import compute_placement_hint
 from atlas_placement_hints.exceptions import AtlasPlacementHintsError
 from atlas_placement_hints.layered_atlas import (
     AbstractLayeredAtlas,
+    CerebellumAtlas,
     MeshBasedLayeredAtlas,
     ThalamusAtlas,
     VoxelBasedLayeredAtlas,
@@ -38,7 +39,11 @@ ALGORITHMS = ["mesh-based", "voxel-based"]
 
 
 def _create_layered_atlas(
-    annotation_path: str, hierarchy_path: str, metadata_path: str, algorithm: str = "mesh-based"
+    annotation_path: str,
+    hierarchy_path: str,
+    metadata_path: str,
+    algorithm: str = "mesh-based",
+    save_local_meshes: bool = False,
 ) -> AbstractLayeredAtlas:
     """
     Create the LayeredAtlas of the region `region_acronym`.
@@ -60,6 +65,10 @@ def _create_layered_atlas(
 
     if metadata["region"]["name"] == "Thalamus":
         return ThalamusAtlas(annotation, region_map, metadata)
+    if metadata["region"]["name"] == "Cerebellum":
+        return CerebellumAtlas(
+            annotation, region_map, metadata, save_local_meshes=save_local_meshes
+        )
 
     if algorithm == "voxel-based":
         return VoxelBasedLayeredAtlas(annotation, region_map, metadata)
@@ -102,7 +111,7 @@ def _placement_hints(  # pylint: disable=too-many-locals
         )
     distances_info, problems = compute_placement_hints(
         atlas,
-        direction_vectors.raw,
+        direction_vectors,
         max_thicknesses,
         flip_direction_vectors=flip_direction_vectors,
         has_hemispheres=has_hemispheres,
@@ -423,9 +432,21 @@ def olfactory_bulb(
     required=True,
     help="path of the directory to write. It will be created if it doesn't exist.",
 )
+@click.option(
+    "--save-local-meshes",
+    help="Save local meshes in `CWD/meshes` instead of temporary directory",
+    is_flag=True,
+    default=False,
+)
 @log_args(L)
 def cerebellum(
-    verbose, annotation_path, hierarchy_path, metadata_path, direction_vectors_path, output_dir
+    verbose,
+    annotation_path,
+    hierarchy_path,
+    metadata_path,
+    direction_vectors_path,
+    output_dir,
+    save_local_meshes,
 ):
     """Generate and save the placement hints of the mouse cerebellum.
     Placement hints are saved under the names sepecified in `app/metadata/cerebellum_metadata.json`.
@@ -446,7 +467,9 @@ def cerebellum(
     """
     set_verbose(L, verbose)
 
-    atlas = _create_layered_atlas(annotation_path, hierarchy_path, metadata_path)
+    atlas = _create_layered_atlas(
+        annotation_path, hierarchy_path, metadata_path, save_local_meshes=save_local_meshes
+    )
     _placement_hints(
         atlas,
         direction_vectors_path,

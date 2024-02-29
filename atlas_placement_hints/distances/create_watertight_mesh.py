@@ -4,12 +4,14 @@ and its utilities.
 Generating optimized meshes requires Ultraliser,
 see https://bbpcode.epfl.ch/browse/code/viz/Ultraliser
 """
+
 import logging
 import os
 import subprocess
 import tempfile
 from pathlib import Path
 from shutil import which
+from typing import Union
 
 import nrrd  # type: ignore
 import numpy as np
@@ -168,7 +170,10 @@ def log_mesh_optimization_info(
 
 
 def create_watertight_trimesh(
-    binary_image: BoolArray, optimization_info: bool = False
+    binary_image: BoolArray,
+    optimization_info: bool = False,
+    mesh_name: Union[str, None] = None,
+    mode: str = "ultralizer",
 ) -> trimesh.base.Trimesh:
     """
     Create a watertight triangle mesh out of a 3D binary image.
@@ -179,37 +184,56 @@ def create_watertight_trimesh(
         binary_image: 3D image to be processed for the creation of its boundary mesh.
         optimization_info: if True, compute and display optimization info.
             Otherwise no optimization info is computed.
+        mesh_name: name of the mesh to save, if None, tmpdir is used.
+        mode: either 'ultralizer' or 'trimesh', trimesh will apply a simple marching cube algo
+
     Returns:
         optimized_mesh: the optimized triangle mesh produced by ultraVolume2Mesh
          (Dual Marching Cubes algorithm).
     """
-    optimized_mesh = None  # The mesh to be returned.
-    unoptimized_mesh = None
-    with tempfile.TemporaryDirectory() as tempdir:
-        # ultraVolume2Mesh requires a name without file extension.
-        volume_path = str(Path(tempdir, "binary_image"))
-        # Write image to disk for later use by ultraliser.
-        _write_numpy_array_to_img_file(binary_image, volume_path)
-        ultra_volume_2_mesh(
-            volume_path=volume_path + ".hdr",
-            output_directory=tempdir,
-            optimization_iterations=5,
-        )
-        # The format of the following filepaths is imposed by Ultraliser.
-        _volume_path = Path(volume_path)
-        output_filepath_opt = (
-            _volume_path.parent / "meshes" / (str(_volume_path.stem) + "-watertight.obj")
-        )
-        output_filepath_unopt = (
-            _volume_path.parent / "meshes" / (str(_volume_path.stem) + "-dmc.obj")
-        )
-        for filepath in [output_filepath_unopt, output_filepath_opt]:
-            if not Path(filepath).exists():
-                raise AtlasPlacementHintsError(f"Ultraliser failed to generate the mesh {filepath}")
-        unoptimized_mesh = trimesh.load_mesh(output_filepath_unopt)
-        optimized_mesh = trimesh.load_mesh(output_filepath_opt)
+    tempdir: Union[Path, str] = ""
+    if mesh_name is not None:
+        mesh_name = mesh_name.replace(" ", "_")
+        tempdir = Path("meshes") / f"mesh_{mesh_name}"
+        tempdir.mkdir(parents=True, exist_ok=True)
+    else:
+        tempdir_ctx = tempfile.TemporaryDirectory()  # pylint: disable=consider-using-with
+        tempdir = tempdir_ctx.name
+
+    # The format of the following filepaths is imposed by Ultraliser.
+    volume_path = str(Path(tempdir, "binary_image"))
+    _volume_path = Path(volume_path)
+    output_filepath_opt = (
+        _volume_path.parent / "meshes" / (str(_volume_path.stem) + "-watertight.obj")
+    )
+    output_filepath_unopt = _volume_path.parent / "meshes" / (str(_volume_path.stem) + "-dmc.obj")
+    if not output_filepath_opt.exists():
+        if mode == "trimesh":
+            mesh = trimesh.voxel.VoxelGrid(binary_image).marching_cubes
+            Path(output_filepath_opt).parent.mkdir(parents=True, exist_ok=True)
+            mesh.export(output_filepath_opt)
+
+        if mode == "ultralizer":
+            # ultraVolume2Mesh requires a name without file extension.
+            # Write image to disk for later use by ultraliser.
+            _write_numpy_array_to_img_file(binary_image, volume_path)
+            ultra_volume_2_mesh(
+                volume_path=volume_path + ".hdr",
+                output_directory=str(tempdir),
+                optimization_iterations=5,
+            )
+
+    for filepath in [output_filepath_unopt, output_filepath_opt]:
+        if not Path(filepath).exists():
+            raise AtlasPlacementHintsError(f"Ultraliser failed to generate the mesh {filepath}")
+
+    optimized_mesh = trimesh.load_mesh(output_filepath_opt)
+
+    if mesh_name is None:
+        tempdir_ctx.cleanup()
 
     if optimization_info:
+        unoptimized_mesh = trimesh.load_mesh(output_filepath_unopt)
         log_mesh_optimization_info(optimized_mesh, unoptimized_mesh)
 
     optimized_mesh.fix_normals()
