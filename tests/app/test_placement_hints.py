@@ -107,7 +107,7 @@ def test_thalamus():
         ph_y = VoxelData.load_nrrd("placement_hints/[PH]y.nrrd")
         npt.assert_array_equal(ph_y.raw.shape, thalamus_mock.annotation.raw.shape)
 
-        ph_th_no_rt = VoxelData.load_nrrd("placement_hints/[PH]THnotRT.nrrd")
+        ph_th_no_rt = VoxelData.load_nrrd("placement_hints/[PH]layer_2.nrrd")
         npt.assert_array_equal(ph_th_no_rt.raw.shape, thalamus_mock.annotation.raw.shape + (2,))
 
 

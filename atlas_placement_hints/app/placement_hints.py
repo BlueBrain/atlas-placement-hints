@@ -344,8 +344,11 @@ def thalamus(
 
     \b
     - `[PH]y.nrrd`
-    - `[PH]RT.nrrd` (used analogously to "layer 1")
-    - `[PH]THnotRT.nrrd` (used analogously to "layer 2", the deepest layer for thalamus)
+    - `[PH]layer_1.nrrd` (This is the "top-most" layer, equivalent to "RT".
+      This previously used the filename `[PH]RT.nrrd`)
+    - `[PH]layer_2.nrrd` (This is the "deepest" layer, equivalent to the
+      thalamus except the habenular, peripeduncular, and reticular regions.
+      This previously used the filename `[PH]THnotRT.nrrd`)
 
     A report together with an nrrd volume on problematic distance computations are generated
     in `output_dir` under the names:
