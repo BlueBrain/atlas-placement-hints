@@ -8,7 +8,7 @@
     },
     "layers": {
         "names": ["RT", "THnotRT"],
-        "queries": ["RT", "@^\\bAD|AM|AMd|AMv|ATN|AV|CL|CM|DORpm|DORsm|EPI|Eth|GENd|GENv|IAD|IAM|IGL|ILM|IMD|IntG|LAT|LD|LGd|LGd-co|LGd-ip|LGd-sh|LGv|LGvl|LGvm|LH|LP|MD|MDc|MDl|MDm|MED|MG|MGd|MGm|MGv|MH|MTN|PCN|PF|PIL|PIN|PO|POL|PP|PR|PT|PVT|PoT|RE|REth|RH|SGN|SMT|SPA|SPF|SPFm|SPFp|SubG|TH|VAL|VENT|VM|VP|VPL|VPLpc|VPM|VPMpc|Xi\\b$"],
+        "queries": ["RT", "@^AD$|^AMd$|^AMv$|^AV$|^CL$|^CM$|^Eth$|^IAD$|^IAM$|^IGL$|^IMD$|^IntG$|^LD$|^LGd-co$|^LGd-ip$|^LGd-sh$|^LGv_O$|^LP$|^MD_O$|^MGd$|^MGm$|^MGv$|^PCN$|^PF$|^PIL$|^PO$|^POL$|^PR$|^PT$|^PVT$|^PoT$|^RE$|^RH$|^RT$|^SGN$|^SMT$|^SPA$|^SPFm$|^SPFp$|^SubG$|^TH_O$|^VAL$|^VM$|^VPL$|^VPLpc$|^VPM$|^VPMpc$|^Xi$"],
         "attribute": "acronym",
         "with_descendants": false
     }
