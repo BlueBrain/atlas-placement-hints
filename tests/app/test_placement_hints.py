@@ -36,6 +36,7 @@ def test_thalamus():
                 "direction_vectors.nrrd",
                 "--output-dir",
                 "placement_hints",
+                "--create-uncut-thalamus-meshes-flag",
             ],
         )
         assert result.exit_code == 0, str(result.output)

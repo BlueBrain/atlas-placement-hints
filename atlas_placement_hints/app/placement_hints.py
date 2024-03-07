@@ -74,7 +74,7 @@ def _placement_hints(  # pylint: disable=too-many-locals
     max_thicknesses: Optional[List[float]] = None,
     flip_direction_vectors: bool = False,
     has_hemispheres: bool = False,
-    thalamus_meshes_dir: str = None,
+    thalamus_meshes_dir: str = "",
 ) -> None:
     """
     Compute the placement hints for a laminar region of the mouse brain.
@@ -314,33 +314,46 @@ def isocortex(
 @click.option(
     "--thalamus-meshes-dir",
     required=True,
-    help="Path of the directory to use for either saving or loading thalamus meshes. It will be created if it doesn't exist.",
+    help="""Path of the directory to use for either saving or loading thalamus
+    meshes. It will be created if it doesn't exist.""",
 )
 @click.option(
     "--create-uncut-thalamus-meshes-flag",
     required=False,
-    help="(Optional) Flag to create the initial thalamus meshes for manual cutting later. This will not produce placement-hints. You MUST pass either this flag or '--load-cut-thalamus-meshes-flag'.",
+    help="""(Optional) Flag to create the initial thalamus meshes for manual
+    cutting later. This will not produce placement-hints. You MUST pass either
+    this flag or '--load-cut-thalamus-meshes-flag'.""",
     default=False,
     is_flag=True,
 )
 @click.option(
     "--load-cut-thalamus-meshes-flag",
     required=False,
-    help="(Optional) Flag to load your custom thalamus meshes, and then use them to calculate placement-hints. You MUST pass either this flag or '--create-uncut-thalamus-meshes-flag'.",
+    help="""(Optional) Flag to load your custom thalamus meshes, and then use
+    them to calculate placement-hints. You MUST pass either this flag or
+    '--create-uncut-thalamus-meshes-flag'.""",
     default=False,
     is_flag=True,
 )
 @log_args(L)
 def thalamus(
-    verbose, annotation_path, hierarchy_path, metadata_path, direction_vectors_path, output_dir,
-    thalamus_meshes_dir, create_uncut_thalamus_meshes_flag, load_cut_thalamus_meshes_flag
+    verbose,
+    annotation_path,
+    hierarchy_path,
+    metadata_path,
+    direction_vectors_path,
+    output_dir,
+    thalamus_meshes_dir,
+    create_uncut_thalamus_meshes_flag,
+    load_cut_thalamus_meshes_flag,
 ):
     """Generate and save the placement hints of the mouse thalamus.
 
-    Note that you MUST pass either '--create-uncut-thalamus-meshes-flag' or '--load-cut-thalamus-meshes-flag'.
+    Note that you MUST pass either '--create-uncut-thalamus-meshes-flag' or
+    '--load-cut-thalamus-meshes-flag'.
 
-    Placement hints are saved under the names specified in `app/metadata/thalamus_metadata.json`.
-    Default to:
+    Placement hints are saved under the names specified in
+    `app/metadata/thalamus_metadata.json`. These default to:
 
     \b
     - `[PH]y.nrrd`
@@ -350,22 +363,23 @@ def thalamus(
       thalamus except the habenular, peripeduncular, and reticular regions.
       This previously used the filename `[PH]THnotRT.nrrd`)
 
-    A report together with an nrrd volume on problematic distance computations are generated
-    in `output_dir` under the names:
+    A report together with an nrrd volume on problematic distance computations
+    are generated in `output_dir` under the names:
 
     \b
     - `distance_report.json`
-    - `<Thalamus>_problematic_voxel_mask.nrrd` (mask of the voxels for which the computed
-    placement hints cannot be trusted).  <Thalamus> is the region name specified in
-    thalamus_metadata.json. Defaults to "Thalamus".
+    - `<Thalamus>_problematic_voxel_mask.nrrd` (mask of the voxels for which
+      the computed placement hints cannot be trusted).  <Thalamus> is the
+      region name specified in thalamus_metadata.json. Defaults to "Thalamus".
 
-    The annotation file can contain the thalamus or a superset.
-    For the algorithm to work properly, some space should separate the boundary
-    of the thalamus from the boundary of its enclosing array.
+    The annotation file can contain the thalamus or a superset. For the
+    algorithm to work properly, some space should separate the boundary of the
+    thalamus from the boundary of its enclosing array.
 
-    For instructions on all steps necessary to generate the thalamus' placement hints, see
-    'atlas-placement-hints/atlas_placement_hints/layered_atlas.py:ThalamusAtlas' and its methods for
-    details.
+    For instructions on all steps necessary to generate the thalamus' placement
+    hints, see
+    'atlas-placement-hints/atlas_placement_hints/layered_atlas.py:ThalamusAtlas'
+    and its methods for details.
     """
     set_verbose(L, verbose)
 
@@ -383,7 +397,11 @@ def thalamus(
             has_hemispheres=True,
         )
     else:
-        print("\n--> ERROR: You MUST pass either '--create-uncut-thalamus-meshes-flag' or '--load-cut-thalamus-meshes-flag'. Exiting.\n")
+        print(
+            """\n--> ERROR: You MUST pass either
+            '--create-uncut-thalamus-meshes-flag' or
+            '--load-cut-thalamus-meshes-flag'. Exiting.\n"""
+        )
         exit()
 
 

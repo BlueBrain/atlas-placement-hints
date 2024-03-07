@@ -27,7 +27,7 @@ def compute_placement_hints(
     max_thicknesses: Optional[List[float]] = None,
     flip_direction_vectors: bool = False,
     has_hemispheres: bool = True,
-    thalamus_meshes_dir: str = None,
+    thalamus_meshes_dir: str = "",
 ) -> Tuple[DistanceInfo, Dict]:
     """
     Compute the placement hints for a laminar region of the mouse brain.
