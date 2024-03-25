@@ -1,6 +1,7 @@
 """
  Mocking tools for the unit tests related to placement hints.
 """
+
 from typing import Tuple
 
 import numpy as np
@@ -209,7 +210,8 @@ class ThalamusMock:
         raw = np.zeros(shape, dtype=int)
         reticular_nucleus_thickness = int(layer_thickness_ratio * shape[0])
         raw[:reticular_nucleus_thickness, ...] = 262  # Region id of the reticular nucleus (RT)
-        raw[reticular_nucleus_thickness:, ...] = 64   # Region id of the Anterodorsal nucleus (AD) of the thalamus
+        # Region id of the Anterodorsal nucleus (AD) of the thalamus
+        raw[reticular_nucleus_thickness:, ...] = 64
 
         self.volume = shape[0] * shape[1] * shape[2]  # Number of voxels with positive labels
 
