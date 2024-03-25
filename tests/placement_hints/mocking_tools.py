@@ -209,7 +209,7 @@ class ThalamusMock:
         raw = np.zeros(shape, dtype=int)
         reticular_nucleus_thickness = int(layer_thickness_ratio * shape[0])
         raw[:reticular_nucleus_thickness, ...] = 262  # Region id of the reticular nucleus (RT)
-        raw[reticular_nucleus_thickness:, ...] = 549  # Region id of the thalamus (TH)
+        raw[reticular_nucleus_thickness:, ...] = 64   # Region id of the Anterodorsal nucleus (AD) of the thalamus
 
         self.volume = shape[0] * shape[1] * shape[2]  # Number of voxels with positive labels
 
@@ -224,13 +224,9 @@ class ThalamusMock:
                     "acronym": "TH",
                     "children": [
                         {
-                            "id": 856,
-                            "acronym": "DORpm",
+                            "id": 64,
+                            "acronym": "AD",
                             "children": [{"acronym": "RT", "id": 262}],
-                        },
-                        {
-                            "id": 864,
-                            "acronym": "DORsm",
                         },
                     ],
                 },
