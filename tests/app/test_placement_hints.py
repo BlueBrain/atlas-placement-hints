@@ -44,14 +44,22 @@ def test_thalamus():
         )
         assert result.exit_code == 0, str(result.output)
 
-        copyfile("thalamus_meshes/reticular_nucleus_mesh_left_hemisphere_bottom_original.stl",
-                 "thalamus_meshes/reticular_nucleus_mesh_left_hemisphere_bottom_handcut.stl")
-        copyfile("thalamus_meshes/reticular_nucleus_mesh_left_hemisphere_top_original.stl",
-                 "thalamus_meshes/reticular_nucleus_mesh_left_hemisphere_top_handcut.stl")
-        copyfile("thalamus_meshes/reticular_nucleus_mesh_right_hemisphere_bottom_original.stl",
-                 "thalamus_meshes/reticular_nucleus_mesh_right_hemisphere_bottom_handcut.stl")
-        copyfile("thalamus_meshes/reticular_nucleus_mesh_right_hemisphere_top_original.stl",
-                 "thalamus_meshes/reticular_nucleus_mesh_right_hemisphere_top_handcut.stl")
+        copyfile(
+            "thalamus_meshes/reticular_nucleus_mesh_left_hemisphere_bottom_original.stl",
+            "thalamus_meshes/reticular_nucleus_mesh_left_hemisphere_bottom_handcut.stl",
+        )
+        copyfile(
+            "thalamus_meshes/reticular_nucleus_mesh_left_hemisphere_top_original.stl",
+            "thalamus_meshes/reticular_nucleus_mesh_left_hemisphere_top_handcut.stl",
+        )
+        copyfile(
+            "thalamus_meshes/reticular_nucleus_mesh_right_hemisphere_bottom_original.stl",
+            "thalamus_meshes/reticular_nucleus_mesh_right_hemisphere_bottom_handcut.stl",
+        )
+        copyfile(
+            "thalamus_meshes/reticular_nucleus_mesh_right_hemisphere_top_original.stl",
+            "thalamus_meshes/reticular_nucleus_mesh_right_hemisphere_top_handcut.stl",
+        )
 
         result2 = runner.invoke(
             tested.thalamus,
@@ -66,11 +74,10 @@ def test_thalamus():
                 "placement_hints",
                 "--thalamus-meshes-dir",
                 "thalamus_meshes",
-                "--load-cut-thalamus-meshes-flag"
+                "--load-cut-thalamus-meshes-flag",
             ],
         )
         assert result2.exit_code == 0, str(result2.output)
-
 
         # The values selected below as upper bounds are surprisingly large, which can be explained
         # as follows. Due to the shape and the size of the simplified brain region under test,
