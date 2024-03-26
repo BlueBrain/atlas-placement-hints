@@ -338,10 +338,9 @@ class ThalamusAtlas(MeshBasedLayeredAtlas):
     for the thalamus has been changed, and now requires a manual step. You
     should do the following steps:
 
-    1. Pass both the argument '--thalamus-meshes-dir /your/folder/here' and the
-    flag '--create-uncut-thalamus-meshes' to the top-level CLI command
-    'atlas-placement-hints thalamus'. This will create the meshes, but NOT the
-    placement-hints, and the program will exit.
+    1. Pass the argument '--thalamus-meshes-dir /your/folder/here' to the
+    top-level CLI command 'atlas-placement-hints thalamus'. This will create
+    the meshes, but NOT the placement-hints, and the program will exit.
 
     2. MANUALLY cut the reticular meshes into the 'top' and 'bottom' halves
     (aka the inner and outer halves if looking outwards from the center of the

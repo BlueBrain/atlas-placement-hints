@@ -5,7 +5,6 @@ from __future__ import annotations
 import json
 import logging
 import os
-import sys
 from pathlib import Path
 from typing import List, Optional
 
@@ -319,20 +318,10 @@ def isocortex(
     meshes. It will be created if it doesn't exist.""",
 )
 @click.option(
-    "--create-uncut-thalamus-meshes-flag",
-    required=False,
-    help="""(Optional) Flag to create the initial thalamus meshes for manual
-    cutting later. This will not produce placement-hints. You MUST pass either
-    this flag or '--load-cut-thalamus-meshes-flag'.""",
-    default=False,
-    is_flag=True,
-)
-@click.option(
-    "--load-cut-thalamus-meshes-flag",
+    "--load-cut-thalamus-meshes",
     required=False,
     help="""(Optional) Flag to load your custom thalamus meshes, and then use
-    them to calculate placement-hints. You MUST pass either this flag or
-    '--create-uncut-thalamus-meshes-flag'.""",
+    them to calculate placement-hints.""",
     default=False,
     is_flag=True,
 )
@@ -346,13 +335,15 @@ def thalamus(
     direction_vectors_path,
     output_dir,
     thalamus_meshes_dir,
-    create_uncut_thalamus_meshes_flag,
-    load_cut_thalamus_meshes_flag,
+    load_cut_thalamus_meshes,
 ):
     """Generate and save the placement hints of the mouse thalamus.
 
-    Note that you MUST pass either '--create-uncut-thalamus-meshes-flag' or
-    '--load-cut-thalamus-meshes-flag'.
+    First, call this without passing '--load-cut-thalamus-meshes' to
+    create your region meshes, but not your placement-hints. Then, hand-cut
+    your meshes according to the documentation in
+    'atlas_placement_hints/layered_atlas.py::ThalamusAtlas'. Finally, call
+    this again while passing '--load-cut-thalamus-meshes'.
 
     Placement hints are saved under the names specified in
     `app/metadata/thalamus_metadata.json`. These default to:
@@ -380,17 +371,14 @@ def thalamus(
 
     For instructions on all steps necessary to generate the thalamus' placement
     hints, see
-    'atlas-placement-hints/atlas_placement_hints/layered_atlas.py:ThalamusAtlas'
+    'atlas-placement-hints/atlas_placement_hints/layered_atlas.py::ThalamusAtlas'
     and its methods for details.
     """
     set_verbose(L, verbose)
 
     atlas = _create_layered_atlas(annotation_path, hierarchy_path, metadata_path)
 
-    if create_uncut_thalamus_meshes_flag:
-        Path(thalamus_meshes_dir).mkdir(parents=True, exist_ok=True)
-        atlas.create_uncut_thalamus_meshes(thalamus_meshes_dir)
-    elif load_cut_thalamus_meshes_flag:
+    if load_cut_thalamus_meshes:
         _placement_hints(
             atlas,
             direction_vectors_path,
@@ -399,12 +387,8 @@ def thalamus(
             has_hemispheres=True,
         )
     else:
-        print(
-            """\n--> ERROR: You MUST pass either
-            '--create-uncut-thalamus-meshes-flag' or
-            '--load-cut-thalamus-meshes-flag'. Exiting.\n"""
-        )
-        sys.exit()
+        Path(thalamus_meshes_dir).mkdir(parents=True, exist_ok=True)
+        atlas.create_uncut_thalamus_meshes(thalamus_meshes_dir)
 
 
 @app.command()
