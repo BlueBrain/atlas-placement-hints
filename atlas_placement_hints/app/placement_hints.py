@@ -74,6 +74,7 @@ def _placement_hints(  # pylint: disable=too-many-locals
     max_thicknesses: Optional[List[float]] = None,
     flip_direction_vectors: bool = False,
     has_hemispheres: bool = False,
+    thalamus_meshes_dir: str = "",
 ) -> None:
     """
     Compute the placement hints for a laminar region of the mouse brain.
@@ -93,6 +94,10 @@ def _placement_hints(  # pylint: disable=too-many-locals
         has_hemispheres: (optional) If True, split the volume into halves along the z-axis and
             handle each of theses 'hemispheres' separately. Otherwise the whole volume is handled.
             Defaults to True.
+        thalamus_meshes_dir: (optional) Path of the directory to load thalamus meshes
+            from. Currently only used for thalamus. Required if you are producing thalamus
+            placement-hints. Defaults to None.
+
     """
     direction_vectors = voxcell.VoxelData.load_nrrd(direction_vectors_path)
     assert_meta_properties([direction_vectors, atlas.region])
@@ -106,6 +111,7 @@ def _placement_hints(  # pylint: disable=too-many-locals
         max_thicknesses,
         flip_direction_vectors=flip_direction_vectors,
         has_hemispheres=has_hemispheres,
+        thalamus_meshes_dir=thalamus_meshes_dir,
     )
     if not Path(output_dir).exists():
         os.makedirs(output_dir)
@@ -305,41 +311,84 @@ def isocortex(
     required=True,
     help="path of the directory to write. It will be created if it doesn't exist.",
 )
+@click.option(
+    "--thalamus-meshes-dir",
+    required=True,
+    help="""Path of the directory to use for either saving or loading thalamus
+    meshes. It will be created if it doesn't exist.""",
+)
+@click.option(
+    "--load-cut-thalamus-meshes",
+    required=False,
+    help="""(Optional) Flag to load your custom thalamus meshes, and then use
+    them to calculate placement-hints.""",
+    default=False,
+    is_flag=True,
+)
 @log_args(L)
+# pylint: disable=too-many-arguments
 def thalamus(
-    verbose, annotation_path, hierarchy_path, metadata_path, direction_vectors_path, output_dir
+    verbose,
+    annotation_path,
+    hierarchy_path,
+    metadata_path,
+    direction_vectors_path,
+    output_dir,
+    thalamus_meshes_dir,
+    load_cut_thalamus_meshes,
 ):
     """Generate and save the placement hints of the mouse thalamus.
 
-    Placement hints are saved under the names sepecified in `app/metadata/thalamus_metadata.json`.
-    Default to:
+    First, call this without passing '--load-cut-thalamus-meshes' to
+    create your region meshes, but not your placement-hints. Then, hand-cut
+    your meshes according to the documentation in
+    'atlas_placement_hints/layered_atlas.py::ThalamusAtlas'. Finally, call
+    this again while passing '--load-cut-thalamus-meshes'.
+
+    Placement hints are saved under the names specified in
+    `app/metadata/thalamus_metadata.json`. These default to:
 
     \b
     - `[PH]y.nrrd`
-    - `[PH]Rt.nrrd`, `[PH]VPL.nrrd`
+    - `[PH]layer_1.nrrd` (This is the "top-most" layer, equivalent to "RT".
+      This previously used the filename `[PH]RT.nrrd`)
+    - `[PH]layer_2.nrrd` (This is the "deepest" layer, equivalent to the
+      thalamus except the habenular, peripeduncular, and reticular regions.
+      This previously used the filename `[PH]THnotRT.nrrd`)
 
-    A report together with an nrrd volume on problematic distance computations are generated
-    in `output_dir` under the names:
+    A report together with an nrrd volume on problematic distance computations
+    are generated in `output_dir` under the names:
 
     \b
     - `distance_report.json`
-    - `<Thalamus>_problematic_voxel_mask.nrrd` (mask of the voxels for which the computed
-    placement hints cannot be trusted).  <Thalamus> is the region name specified in
-    thalamus_metadata.json. Defaults to "Thalamus".
+    - `<Thalamus>_problematic_voxel_mask.nrrd` (mask of the voxels for which
+      the computed placement hints cannot be trusted).  <Thalamus> is the
+      region name specified in thalamus_metadata.json. Defaults to "Thalamus".
 
-    The annotation file can contain the thalamus or a superset.
-    For the algorithm to work properly, some space should separate the boundary
-    of the thalamus from the boundary of its enclosing array.
+    The annotation file can contain the thalamus or a superset. For the
+    algorithm to work properly, some space should separate the boundary of the
+    thalamus from the boundary of its enclosing array.
+
+    For instructions on all steps necessary to generate the thalamus' placement
+    hints, see
+    'atlas-placement-hints/atlas_placement_hints/layered_atlas.py::ThalamusAtlas'
+    and its methods for details.
     """
     set_verbose(L, verbose)
 
     atlas = _create_layered_atlas(annotation_path, hierarchy_path, metadata_path)
-    _placement_hints(
-        atlas,
-        direction_vectors_path,
-        output_dir,
-        has_hemispheres=True,
-    )
+
+    if load_cut_thalamus_meshes:
+        _placement_hints(
+            atlas,
+            direction_vectors_path,
+            output_dir,
+            thalamus_meshes_dir=thalamus_meshes_dir,
+            has_hemispheres=True,
+        )
+    else:
+        Path(thalamus_meshes_dir).mkdir(parents=True, exist_ok=True)
+        atlas.create_uncut_thalamus_meshes(thalamus_meshes_dir)
 
 
 @app.command()

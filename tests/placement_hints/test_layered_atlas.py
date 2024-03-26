@@ -165,7 +165,7 @@ class Test_Thalamus_Atlas(unittest.TestCase):
 
     def test_create_layered_volume(self):
         expected = self.thalamus_mock.annotation.raw.copy()
-        expected[expected == 549] = 2
+        expected[expected == 64] = 2
         expected[expected == 262] = 1
         npt.assert_array_equal(self.thalamus_atlas.volume, expected)
 
