@@ -4,20 +4,24 @@ voxel-to-layer distances wrt to direction vectors in a laminar brain region.
 This module is used for the computation of placement hints in the mouse
 isocortex and in the mouse Hippocampus CA1 region.
 """
+
 from __future__ import annotations
 
 import logging
 import os
+import sys
 from abc import ABC, abstractmethod
 from enum import IntEnum
-from typing import TYPE_CHECKING, Dict, List, Union
+from typing import Dict, List, Union
 
 import numpy as np
+import trimesh  # type: ignore
 from atlas_commons.typing import BoolArray, FloatArray, NDArray
 from atlas_commons.utils import create_layered_volume, query_region_mask, split_into_halves
 from cached_property import cached_property  # type: ignore
 from cgal_pybind import estimate_thicknesses
 from tqdm import tqdm  # type: ignore
+from voxcell import RegionMap, VoxelData  # type: ignore
 
 from atlas_placement_hints.distances.create_watertight_mesh import create_watertight_trimesh
 from atlas_placement_hints.distances.distances_to_meshes import (
@@ -31,13 +35,11 @@ from atlas_placement_hints.utils import (
     get_convex_hull_boundary,
 )
 
-if TYPE_CHECKING:  # pragma: no cover
-    import trimesh  # type: ignore
-    from voxcell import RegionMap, VoxelData  # type: ignore
+# from typing import TYPE_CHECKING, Dict, List, Union
+# if TYPE_CHECKING:  # pragma: no cover
+#     import trimesh  # type: ignore
+#     from voxcell import RegionMap, VoxelData  # type: ignore
 
-# AES These are needed
-import trimesh
-from voxcell import VoxelData
 
 logging.basicConfig(level=logging.INFO)
 L = logging.getLogger(__name__)
@@ -217,6 +219,7 @@ class MeshBasedLayeredAtlas(AbstractLayeredAtlas):
 
         return meshes
 
+    # pylint: disable=W0613
     def _compute_dists_and_obtuse_angles(
         self, volume, direction_vectors, hemisphere=LEFT, thalamus_meshes_dir: str = ""
     ):
@@ -499,13 +502,14 @@ class ThalamusAtlas(MeshBasedLayeredAtlas):
             overall_bottom.export(
                 os.path.join(
                     thalamus_meshes_dir,
-                    "overall_bottom_{}_hemisphere_original.stl".format(hemisphere_string),
+                    f"overall_bottom_{hemisphere_string}_hemisphere_original.stl",
                 )
             )
 
         L.info("Finished creating and saving meshes for both hemispheres. Exiting.")
-        exit()
+        sys.exit()
 
+    # pylint: disable=W0613
     def load_layer_meshes(
         self, layered_volume: NDArray[np.integer], thalamus_meshes_dir: str, hemisphere=LEFT
     ) -> List["trimesh.Trimesh"]:
@@ -560,7 +564,7 @@ class ThalamusAtlas(MeshBasedLayeredAtlas):
                 'atlas-placement-hints/atlas_placement_hints/layered_atlas.py:ThalamusAtlas'
                 for details. Exiting.\n"""
             )
-            exit()
+            sys.exit()
 
         if hemisphere == LEFT:
             hemisphere_string = "left"
@@ -577,29 +581,33 @@ class ThalamusAtlas(MeshBasedLayeredAtlas):
         reticular_nucleus_mesh_top = trimesh.load_mesh(
             os.path.join(
                 thalamus_meshes_dir,
-                "reticular_nucleus_mesh_{}_hemisphere_top_handcut.stl".format(hemisphere_string),
+                f"reticular_nucleus_mesh_{hemisphere_string}_hemisphere_top_handcut.stl",
             )
         )
 
         reticular_nucleus_mesh_bottom = trimesh.load_mesh(
             os.path.join(
                 thalamus_meshes_dir,
-                "reticular_nucleus_mesh_{}_hemisphere_bottom_handcut.stl".format(hemisphere_string),
+                f"reticular_nucleus_mesh_{hemisphere_string}_hemisphere_bottom_handcut.stl",
             )
         )
         # We have to invert the normals of the bottom mesh faces after hand-cutting, since by
         # default they face "outward", not "inward" like we want (so they can align with the
         # direction vectors)
-        reticular_nucleus_mesh_bottom.invert()
+        reticular_nucleus_mesh_bottom.invert()  # type: ignore  # type: ignore
 
         overall_bottom = trimesh.load_mesh(
             os.path.join(
                 thalamus_meshes_dir,
-                "overall_bottom_{}_hemisphere_original.stl".format(hemisphere_string),
+                f"overall_bottom_{hemisphere_string}_hemisphere_original.stl",
             )
         )
 
-        return [reticular_nucleus_mesh_top, reticular_nucleus_mesh_bottom, overall_bottom]
+        return [
+            reticular_nucleus_mesh_top,  # type: ignore  # type: ignore
+            reticular_nucleus_mesh_bottom,  # type: ignore  # type: ignore
+            overall_bottom,  # type: ignore  # type: ignore
+        ]
 
     def _compute_dists_and_obtuse_angles(
         self, volume, direction_vectors, hemisphere=LEFT, thalamus_meshes_dir: str = ""

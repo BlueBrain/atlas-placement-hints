@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import sys
 from pathlib import Path
 from typing import List, Optional
 
@@ -336,6 +337,7 @@ def isocortex(
     is_flag=True,
 )
 @log_args(L)
+# pylint: disable=too-many-arguments
 def thalamus(
     verbose,
     annotation_path,
@@ -402,7 +404,7 @@ def thalamus(
             '--create-uncut-thalamus-meshes-flag' or
             '--load-cut-thalamus-meshes-flag'. Exiting.\n"""
         )
-        exit()
+        sys.exit()
 
 
 @app.command()
