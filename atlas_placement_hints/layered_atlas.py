@@ -35,12 +35,6 @@ from atlas_placement_hints.utils import (
     get_convex_hull_boundary,
 )
 
-# from typing import TYPE_CHECKING, Dict, List, Union
-# if TYPE_CHECKING:  # pragma: no cover
-#     import trimesh  # type: ignore
-#     from voxcell import RegionMap, VoxelData  # type: ignore
-
-
 logging.basicConfig(level=logging.INFO)
 L = logging.getLogger(__name__)
 
@@ -219,10 +213,10 @@ class MeshBasedLayeredAtlas(AbstractLayeredAtlas):
 
         return meshes
 
-    # pylint: disable=W0613
     def _compute_dists_and_obtuse_angles(
         self, volume, direction_vectors, hemisphere=LEFT, thalamus_meshes_dir: str = ""
     ):
+        # pylint: disable=unused-argument
         layer_meshes = self.create_layer_meshes(volume)
         # pylint: disable=fixme
         # TODO: compute max_smooth_error and use it as the value of rollback_distance
