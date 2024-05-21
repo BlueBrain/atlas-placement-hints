@@ -210,7 +210,7 @@ def create_watertight_trimesh(
         optimized_mesh = trimesh.load_mesh(output_filepath_opt)
 
     if optimization_info:
-        log_mesh_optimization_info(optimized_mesh, unoptimized_mesh)
+        log_mesh_optimization_info(optimized_mesh, unoptimized_mesh)  # type: ignore
 
-    optimized_mesh.fix_normals()
-    return optimized_mesh
+    optimized_mesh.fix_normals()  # type: ignore
+    return optimized_mesh  # type: ignore
