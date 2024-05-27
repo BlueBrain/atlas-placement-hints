@@ -436,9 +436,8 @@ class ThalamusAtlas(MeshBasedLayeredAtlas):
         )
         hemisphere_volumes = split_into_halves(self.volume)
         for hemisphere in [LEFT, RIGHT]:
-            if hemisphere == LEFT:
-                hemisphere_string = "left"
-            elif hemisphere == RIGHT:
+            hemisphere_string = "left"
+            if hemisphere == RIGHT:
                 hemisphere_string = "right"
             L.info(
                 "Creating uncut meshes for the %s hemisphere (hemisphere %d) of the %s region ...",
@@ -559,6 +558,7 @@ class ThalamusAtlas(MeshBasedLayeredAtlas):
             )
             sys.exit()
 
+        hemisphere_string = "unknown"
         if hemisphere == LEFT:
             hemisphere_string = "left"
         elif hemisphere == RIGHT:
