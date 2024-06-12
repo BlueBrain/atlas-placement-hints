@@ -24,7 +24,7 @@ L = logging.getLogger(__name__)
 
 
 def distances_to_mesh_wrt_dir(
-    mesh: "trimesh.TriMesh",
+    mesh: "trimesh.Trimesh",
     origins: FloatArray,
     directions: FloatArray,
     backward: bool = False,
