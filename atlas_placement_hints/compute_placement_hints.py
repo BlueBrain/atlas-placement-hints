@@ -70,12 +70,23 @@ def compute_placement_hints(
                 least one distance-related problem.
                 See distances.distance_to_meshes.report_distance_problems doc.
     """
-    distances_info = atlas.compute_distances_to_layer_boundaries(
-        direction_vectors,
-        flip_direction_vectors=flip_direction_vectors,
-        has_hemispheres=has_hemispheres,
-        thalamus_meshes_dir=thalamus_meshes_dir,
-    )
+
+    if thalamus_meshes_dir == "":
+        # Use either the AbstractLayeredAtlas or VoxelBasedLayeredAtlas version if
+        # no meshes are provided
+        distances_info = atlas.compute_distances_to_layer_boundaries(
+            direction_vectors,
+            flip_direction_vectors=flip_direction_vectors,
+            has_hemispheres=has_hemispheres,
+        )
+    else:
+        # Use the MeshBasedLayeredAtlas version if meshes are provided
+        distances_info = atlas.compute_distances_to_layer_boundaries(
+            direction_vectors,
+            flip_direction_vectors=flip_direction_vectors,
+            has_hemispheres=has_hemispheres,
+            thalamus_meshes_dir=thalamus_meshes_dir,
+        )
 
     distances_to_meshes = distances_info["distances_to_layer_boundaries"]
     tolerance = 2.0 * atlas.region.voxel_dimensions[0]
